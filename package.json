@@ -11,6 +11,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
+    "test": "echo \"No tests configured yet\" && exit 0",
+    "test:watch": "echo \"No tests configured yet\" && exit 0",
     "prepare": "husky"
   },
   "dependencies": {

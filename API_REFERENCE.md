@@ -1,6 +1,6 @@
 # LMS Backend REST API Reference
 
-> **Source:** Extracted from `/Users/codeentechnologies/Sites/lms-site/wp-content/plugins/lms-backend-rest-api`
+> **Source:** Extracted from the `lms-backend-rest-api` WordPress plugin
 > **Namespace:** `lms-backend/v1`
 > **Base URL:** `https://<your-domain>/wp-json/lms-backend/v1`
 

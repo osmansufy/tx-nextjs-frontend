@@ -2,7 +2,7 @@
 
 > Owner: Engineering · Author: Senior Engineering · Status: **Active Plan**
 > Reference implementation: <https://trainingexcellence.org.uk/>
-> Backend plugin: `lms-backend-rest-api` (local: `/Users/codeentechnologies/Sites/lms-site/wp-content/plugins/lms-backend-rest-api`)
+> Backend plugin: `lms-backend-rest-api` (see: <https://github.com/Codezen-technology/wp-lms-backend-rest-api>)
 > API namespace: `lms-backend/v1` · Auth: JWT (firebase/php-jwt v7, HS256) · Wraps WPLMS + WooCommerce + BuddyPress
 > **Reusability goal:** This frontend is designed to be deployed against **any** WordPress site running the `lms-backend-rest-api` plugin with zero code changes — configuration only.
 
@@ -246,11 +246,11 @@ The scaffold's choices are correct. Keep them. Notes added.
 **Add to `package.json` (Phase 0):**
 
 ```bash
-npm i @stripe/stripe-js @stripe/react-stripe-js @tanstack/react-query@^5.100 dompurify isomorphic-dompurify @sentry/nextjs jose next-intl
+npm i @stripe/stripe-js @stripe/react-stripe-js @tanstack/react-query@^5.100 dompurify isomorphic-dompurify @sentry/nextjs next-intl
 npm i -D vitest @vitest/ui @testing-library/react @testing-library/jest-dom @testing-library/user-event jsdom @playwright/test msw
 ```
 
-`jose` is for verifying JWTs server-side in route handlers (Phase 2 BFF) — don't pull a server-only crypto package into the client bundle.
+**Note:** We don't need `jose` for JWT verification — the BFF forwards tokens to WordPress which validates them. If you later need to decode tokens server-side (e.g., for caching decisions), add `jose` then.
 
 ---
 
@@ -469,11 +469,50 @@ src/
 │   │   └── layout.tsx               ← NextIntlClientProvider wraps here
 │   ├── api/                          ← Next route handlers (BFF) — outside [locale]
 │   │   ├── auth/
-│   │   │   ├── login/route.ts
-│   │   │   ├── refresh/route.ts
-│   │   │   └── logout/route.ts
+│   │   │   ├── login/route.ts        ← POST: login, set httpOnly cookies
+│   │   │   ├── register/route.ts     ← POST: register, set cookies
+│   │   │   ├── logout/route.ts       ← POST: revoke token, clear cookies
+│   │   │   ├── refresh/route.ts      ← POST: manual refresh (rarely needed)
+│   │   │   ├── forgot-password/route.ts
+│   │   │   └── reset-password/route.ts
+│   │   ├── users/
+│   │   │   └── me/
+│   │   │       ├── route.ts          ← GET/PATCH: profile
+│   │   │       ├── progress/route.ts ← GET: all course progress
+│   │   │       └── enrollments/route.ts ← GET: enrolled courses
+│   │   ├── courses/
+│   │   │   └── [id]/
+│   │   │       ├── enroll/route.ts   ← POST: enroll in course
+│   │   │       └── reviews/route.ts  ← POST: create review
+│   │   ├── units/
+│   │   │   └── [id]/
+│   │   │       ├── content/route.ts  ← GET: rendered lesson content
+│   │   │       └── complete/route.ts ← POST: mark complete
+│   │   ├── quizzes/
+│   │   │   └── [id]/
+│   │   │       ├── questions/route.ts ← GET: quiz questions
+│   │   │       ├── start/route.ts    ← POST: start attempt
+│   │   │       ├── submit/route.ts   ← POST: submit answers
+│   │   │       └── results/route.ts  ← GET: attempt results
+│   │   ├── assignments/
+│   │   │   └── [id]/
+│   │   │       ├── route.ts          ← GET: assignment detail
+│   │   │       ├── submit/route.ts   ← POST: submit assignment
+│   │   │       └── status/route.ts   ← GET: submission status
+│   │   ├── cart/
+│   │   │   ├── route.ts              ← GET/DELETE: cart
+│   │   │   ├── items/route.ts        ← POST: add item
+│   │   │   └── items/[key]/route.ts  ← PATCH/DELETE: update/remove item
+│   │   ├── orders/
+│   │   │   ├── route.ts              ← GET/POST: list/create order
+│   │   │   └── [id]/
+│   │   │       ├── route.ts          ← GET: order detail
+│   │   │       └── pay/route.ts      ← POST: process payment
+│   │   ├── reviews/
+│   │   │   ├── my-reviews/route.ts   ← GET: user's reviews
+│   │   │   └── [id]/route.ts         ← PATCH/DELETE: update/delete review
 │   │   ├── newsletter/route.ts
-│   │   └── revalidate/route.ts      ← on-demand ISR via WP webhook
+│   │   └── revalidate/route.ts       ← on-demand ISR via WP webhook
 │   ├── sitemap.ts
 │   ├── robots.ts
 │   ├── opengraph-image.tsx
@@ -753,79 +792,341 @@ api.interceptors.response.use(
 
 `src/lib/api/parsers.ts` — `paginate()` should accept the `{ items, total, page, per_page, totalPages }` shape and not invent its own from headers, but keep the `X-WP-Total` header fallback for `wp/v2` calls.
 
-### 4.4 Auth flow
+### 4.4 Auth Flow (BFF Pattern with httpOnly Cookies)
 
-Replace JWT-plugin auth with the real controller. Tokens come back as `{ access_token, refresh_token, token_type, expires_in, user }`. Refresh on 401.
+Tokens are **never stored in client JavaScript**. The BFF (Next.js API routes) manages tokens in httpOnly cookies. This prevents XSS token theft.
 
-`src/lib/services/auth.ts`:
+#### 4.4.1 BFF Login Route
 
-```ts
-type LoginResponse = {
-  access_token: string;
-  refresh_token: string;
-  token_type: "Bearer";
-  expires_in: number;
-  user: {
-    id: number;
-    username: string;
-    email: string;
-    display_name: string;
-    roles: string[];
-  };
-};
-
-export const authService = {
-  async login(input: { username: string; password: string }) {
-    const { data } = await api.post<LoginResponse>(endpoints.auth.login, input);
-    return data;
-  },
-  async register(input: { username: string; email: string; password: string }) {
-    const { data } = await api.post<LoginResponse>(endpoints.auth.register, input);
-    return data;
-  },
-  async refresh(refreshToken: string) {
-    const { data } = await api.post<LoginResponse>(endpoints.auth.refresh, {
-      refresh_token: refreshToken,
-    });
-    return data;
-  },
-  async logout() {
-    await api.post(endpoints.auth.logout);
-  },
-  async forgotPassword(email: string) {
-    await api.post(endpoints.auth.forgotPassword, { email });
-  },
-  async resetPassword(input: { key: string; login: string; password: string }) {
-    await api.post(endpoints.auth.resetPassword, input);
-  },
-  async me() {
-    const { data } = await api.get(endpoints.user.me);
-    return data;
-  },
-};
-```
-
-`src/lib/stores/auth.store.ts` adds `refreshToken`, `expiresAt`, and `setSession({ accessToken, refreshToken, expiresIn, user })`. Mirror only `accessToken` to the cookie (`lms_token`) — the refresh token must **not** be reachable by middleware in V1; we keep it in `localStorage` until the BFF lands.
-
-`src/lib/api/client.ts` — add a 401 path that **tries refresh once** before logging out:
+`src/app/api/auth/login/route.ts`:
 
 ```ts
-let refreshPromise: Promise<string> | null = null;
+import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
 
-async function silentRefresh(): Promise<string> {
-  if (refreshPromise) return refreshPromise;
-  refreshPromise = (async () => {
-    const store = useAuthStore.getState();
-    if (!store.refreshToken) throw new Error("no_refresh_token");
-    const session = await authService.refresh(store.refreshToken);
-    store.setSession(session);
-    return session.access_token;
-  })().finally(() => { refreshPromise = null; });
-  return refreshPromise;
+const WP_API = process.env.WP_API_URL!;
+const LMS_NS = process.env.LMS_NAMESPACE ?? 'lms-backend/v1';
+
+export async function POST(request: Request) {
+  const body = await request.json();
+
+  const wpRes = await fetch(`${WP_API}/wp-json/${LMS_NS}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  const json = await wpRes.json();
+
+  if (!wpRes.ok || !json.success) {
+    return NextResponse.json(
+      { error: json.message ?? 'Login failed' },
+      { status: wpRes.status }
+    );
+  }
+
+  const { access_token, refresh_token, expires_in, user } = json.data;
+  const cookieStore = cookies();
+
+  // httpOnly cookies — NOT accessible to JavaScript
+  cookieStore.set('access_token', access_token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: expires_in,
+    path: '/',
+  });
+
+  cookieStore.set('refresh_token', refresh_token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 7 * 24 * 60 * 60, // 7 days
+    path: '/',
+  });
+
+  // Non-httpOnly cookie for middleware/client auth awareness
+  cookieStore.set('user_logged_in', '1', {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: expires_in,
+    path: '/',
+  });
+
+  // Return user data only — no tokens!
+  return NextResponse.json({ user });
 }
 ```
 
-Then in the response error interceptor, on 401 with a stored refresh token: `silentRefresh() → retry once → on second failure, hard logout`. Without this, every user gets booted at the first token expiry (`expires_in` defaults to 7 days but JWT clock skew kicks people out earlier in practice).
+#### 4.4.2 BFF Proxy Utility
+
+`src/lib/api/bff.ts`:
+
+```ts
+import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
+
+const WP_API = process.env.WP_API_URL!;
+const LMS_NS = process.env.LMS_NAMESPACE ?? 'lms-backend/v1';
+
+type ProxyOptions = {
+  method?: string;
+  body?: unknown;
+  requiresAuth?: boolean;
+};
+
+export async function proxyToWP(
+  wpPath: string,
+  options: ProxyOptions = {}
+): Promise<NextResponse> {
+  const { method = 'GET', body, requiresAuth = true } = options;
+  const cookieStore = cookies();
+
+  let token = cookieStore.get('access_token')?.value;
+
+  if (requiresAuth && !token) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  let res = await fetch(`${WP_API}/wp-json/${LMS_NS}${wpPath}`, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  // On 401, try refresh once
+  if (res.status === 401 && requiresAuth) {
+    const refreshed = await tryRefresh();
+    if (refreshed) {
+      headers['Authorization'] = `Bearer ${refreshed}`;
+      res = await fetch(`${WP_API}/wp-json/${LMS_NS}${wpPath}`, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+      });
+    }
+  }
+
+  const json = await res.json();
+
+  // Unwrap envelope
+  if (json.success === true) {
+    return NextResponse.json(json.data, { status: res.status });
+  }
+
+  return NextResponse.json(
+    { error: json.message ?? 'Request failed', code: json.code },
+    { status: res.status }
+  );
+}
+
+async function tryRefresh(): Promise<string | null> {
+  const cookieStore = cookies();
+  const refreshToken = cookieStore.get('refresh_token')?.value;
+
+  if (!refreshToken) return null;
+
+  const res = await fetch(`${WP_API}/wp-json/${LMS_NS}/auth/refresh`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  });
+
+  if (!res.ok) {
+    // Refresh failed — clear cookies
+    cookieStore.delete('access_token');
+    cookieStore.delete('refresh_token');
+    cookieStore.delete('user_logged_in');
+    return null;
+  }
+
+  const json = await res.json();
+  if (!json.success) return null;
+
+  const { access_token, refresh_token, expires_in } = json.data;
+
+  // Update cookies
+  cookieStore.set('access_token', access_token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: expires_in,
+    path: '/',
+  });
+
+  cookieStore.set('refresh_token', refresh_token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 7 * 24 * 60 * 60,
+    path: '/',
+  });
+
+  return access_token;
+}
+```
+
+#### 4.4.3 Example Protected Route
+
+`src/app/api/users/me/route.ts`:
+
+```ts
+import { proxyToWP } from '@/lib/api/bff';
+
+export async function GET() {
+  return proxyToWP('/users/me');
+}
+
+export async function PATCH(request: Request) {
+  const body = await request.json();
+  return proxyToWP('/users/me', { method: 'PATCH', body });
+}
+```
+
+#### 4.4.4 Client-Side Auth Service
+
+`src/lib/services/auth.ts` — calls the BFF, not WordPress directly:
+
+```ts
+export const authService = {
+  async login(input: { username: string; password: string }) {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error ?? 'Login failed');
+    }
+    return res.json(); // { user }
+  },
+
+  async register(input: { username: string; email: string; password: string }) {
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+      credentials: 'include',
+    });
+    if (!res.ok) throw new Error((await res.json()).error);
+    return res.json();
+  },
+
+  async logout() {
+    await fetch('/api/auth/logout', {
+      method: 'POST',
+      credentials: 'include',
+    });
+  },
+
+  async me() {
+    const res = await fetch('/api/users/me', { credentials: 'include' });
+    if (!res.ok) throw new Error('Not authenticated');
+    return res.json();
+  },
+
+  async forgotPassword(email: string) {
+    await fetch('/api/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  async resetPassword(input: { key: string; login: string; password: string }) {
+    const res = await fetch('/api/auth/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) throw new Error((await res.json()).error);
+  },
+};
+```
+
+#### 4.4.5 Auth Store (Simplified)
+
+`src/lib/stores/auth.store.ts` — stores **user only**, not tokens:
+
+```ts
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+
+type User = {
+  id: number;
+  username: string;
+  email: string;
+  display_name: string;
+  roles: string[];
+};
+
+type AuthState = {
+  user: User | null;
+  isAuthenticated: boolean;
+  setUser: (user: User | null) => void;
+  logout: () => void;
+};
+
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      user: null,
+      isAuthenticated: false,
+      setUser: (user) => set({ user, isAuthenticated: !!user }),
+      logout: () => set({ user: null, isAuthenticated: false }),
+    }),
+    { name: 'auth-storage' }
+  )
+);
+```
+
+#### 4.4.6 Middleware (Updated)
+
+`src/middleware.ts` — checks `user_logged_in` cookie:
+
+```ts
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+
+const protectedPaths = ['/dashboard', '/learn', '/profile', '/orders', '/certificates'];
+
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  const isProtected = protectedPaths.some((p) => pathname.startsWith(p));
+
+  if (isProtected) {
+    const loggedIn = request.cookies.get('user_logged_in')?.value;
+
+    if (!loggedIn) {
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ['/dashboard/:path*', '/learn/:path*', '/profile/:path*', '/orders/:path*', '/certificates/:path*'],
+};
+```
+
+**Key security improvements:**
+- Tokens never touch client JavaScript (XSS-immune)
+- Automatic token refresh handled server-side
+- Single point for auth logic (BFF)
+- Middleware uses a lightweight awareness cookie, not the actual token
 
 ### 4.5 Lessons → Units
 
@@ -876,22 +1177,39 @@ This is the **honest** view. Anything in the right column blocks a live-site-par
 
 Phases run in parallel with the backend P0 work. Each phase ends in a deploy.
 
-### Phase 0 — API alignment + scaffolding fixes (1 sprint, blocks all others)
+### Phase 0 — API alignment + BFF scaffolding (1 sprint, blocks all others)
 
+**Architecture (BFF Pattern):**
+- **Implement BFF proxy routes** (`src/app/api/`) for all authenticated operations (§3.1-3.5):
+  - `/api/auth/*` — login, register, logout, forgot-password, reset-password
+  - `/api/users/me/*` — profile, progress, enrollments
+  - `/api/courses/[id]/*` — enroll, reviews (POST)
+  - `/api/units/[id]/*` — content, complete
+  - `/api/quizzes/[id]/*` — questions, start, submit, results
+  - `/api/assignments/[id]/*` — detail, submit, status
+- **Implement `src/lib/api/bff.ts`** — `proxyToWP()` utility with auto token refresh (§4.4.2)
+- **Use httpOnly cookies for tokens** — never expose to client JS (§4.4.1)
+- Update **middleware** to use `user_logged_in` cookie (§4.4.6)
+
+**API Alignment:**
 - Update `endpoints.ts` to `lms-backend/v1` namespace (§4.2)
 - Update `env.ts` default + `.env.example` with white-label env vars (§4.1, §1b)
-- Add response-unwrap interceptor to axios (§4.3)
-- Rewrite `auth.ts` service for the real auth shape, add refresh-token rotation (§4.4)
+- Add response-unwrap interceptor to axios (§4.3) — used only for RSC direct calls
+- Rewrite `auth.ts` service to call `/api/auth/*` (§4.4.4)
 - Rename `lessons` → `units` everywhere (§4.5)
+
+**Services & Providers:**
 - **Add `settings.ts` service + `SiteSettingsProvider`** — fetch `/settings`, inject CSS variables, provide feature flags context (§1b)
 - Add `src/lib/api/server.ts` for RSC-side fetching using native `fetch` with `next: { revalidate, tags }` — do **not** use axios in server components
 - Replace `paginate()` to consume the API's `{ items, total, page, per_page, totalPages }` envelope
+
+**Tooling:**
 - Wire Sentry, add `instrumentation.ts`
 - Add Vitest + Playwright config; one smoke test per layer
 - Add `next-intl` with `/[locale]/...` routing (§13 PR #6)
-- Confirm CORS: backend `LMS_BACKEND_API_ALLOWED_ORIGINS` includes `http://localhost:3000` and the deploy URL
+- No CORS config needed — BFF eliminates cross-origin issues for auth'd routes
 
-**Done when:** `npm run dev`, login works with a real WP user, `/courses` lists real courses, `/courses/[slug]` renders curriculum, site name/logo/colors load from `/settings` or env fallback.
+**Done when:** `npm run dev`, login sets httpOnly cookie, `/api/users/me` returns profile, `/courses` lists real courses via RSC, `/courses/[slug]` renders curriculum, site name/logo/colors load from `/settings` or env fallback.
 
 ### Phase 1 — Marketing site V1 (2 sprints)
 
@@ -1089,20 +1407,76 @@ Once #6 and #8 are answered, update this section and unblock the `/search` empty
 
 Each item is a PR. Order matters.
 
-1. `chore: align LMS namespace to lms-backend/v1` — `env.ts`, `.env.example`, README env table
-2. `feat(api): add response-unwrap interceptor + paginate envelope` — `client.ts`, `parsers.ts`, tests
-3. `feat(api): rebuild endpoints map for lms-backend/v1` — `endpoints.ts`
-4. `refactor(auth): switch to /auth/login + refresh-token rotation` — `services/auth.ts`, `stores/auth.store.ts`, `client.ts`, `useAuth.ts`, login form
-5. `refactor: rename lessons → units` — services/hooks/components/routes (with redirect for one release)
-6. `feat(i18n): add next-intl with /[locale]/... routing` — install `next-intl`, wrap app in `NextIntlClientProvider`, move route groups under `app/[locale]/`, config `locales: ['en'], defaultLocale: 'en'`
-7. `feat(settings): add site settings service + provider` — `services/settings.ts`, `hooks/useSettings.ts`, `SiteSettingsProvider` context, CSS variable injection for theming, feature flag checks. Fallback to env vars if endpoint unavailable.
-8. `feat(server): add server-only fetcher for RSC` — `lib/api/server.ts`, replace one RSC call as proof
-9. `chore(seo): add sitemap.ts + robots.ts skeletons` — read site name from settings
-10. `chore(monitoring): wire Sentry + instrumentation.ts`
-11. `chore(test): vitest config + 1 service test + 1 component test + Playwright login smoke`
-12. `docs: update README with new env, namespace, white-label setup, and architecture deltas`
+### Foundation (PRs 1-4)
 
-After PR #12 lands, Phase 1 is unblocked.
+1. `chore: align LMS namespace to lms-backend/v1` — `env.ts`, `.env.example`, README env table
+2. `feat(api): rebuild endpoints map for lms-backend/v1` — `endpoints.ts` per §4.2
+3. `feat(api): add response-unwrap interceptor + paginate envelope` — `client.ts`, `parsers.ts`, tests
+4. `refactor: rename lessons → units` — services/hooks/components/routes (with redirect for one release)
+
+### BFF Proxy Layer (PRs 5-7) — CRITICAL FOR SECURITY
+
+5. `feat(bff): add proxy utility with auto-refresh` — `src/lib/api/bff.ts` per §4.4.2
+   - `proxyToWP()` function reads httpOnly cookies
+   - Auto-refreshes on 401, retries once
+   - Unwraps `{ success, data }` envelope
+   - Sets/updates cookies on refresh
+
+6. `feat(bff): implement auth routes` — `src/app/api/auth/*`
+   - `POST /api/auth/login` — validates with WP, sets httpOnly cookies
+   - `POST /api/auth/register` — same pattern
+   - `POST /api/auth/logout` — calls WP, clears cookies
+   - `POST /api/auth/forgot-password`
+   - `POST /api/auth/reset-password`
+
+7. `feat(bff): implement user + learning routes` — `src/app/api/users/*`, `src/app/api/units/*`, `src/app/api/quizzes/*`
+   - `GET/PATCH /api/users/me`
+   - `GET /api/users/me/progress`
+   - `GET /api/users/me/enrollments`
+   - `POST /api/courses/[id]/enroll`
+   - `GET /api/units/[id]/content`
+   - `POST /api/units/[id]/complete`
+   - `GET/POST /api/quizzes/[id]/*`
+
+### Client Updates (PRs 8-10)
+
+8. `refactor(auth): switch auth service to BFF + simplify store` — per §4.4.4, §4.4.5
+   - `services/auth.ts` calls `/api/auth/*` not WP directly
+   - `stores/auth.store.ts` stores `user` only, not tokens
+   - Update `useAuth` hook and login/register forms
+   - Update `middleware.ts` to check `user_logged_in` cookie
+
+9. `feat(api): add server-only fetcher for RSC` — `lib/api/server.ts`
+   - For public data (courses, categories, blog) fetched in Server Components
+   - Uses native `fetch` with `next: { revalidate, tags }`
+   - Does NOT use axios
+
+10. `feat(settings): add site settings service + provider` — per §1b
+    - `services/settings.ts`, `hooks/useSettings.ts`
+    - `SiteSettingsProvider` context
+    - CSS variable injection for theming
+    - Feature flag checks
+    - Fallback to env vars if endpoint unavailable
+
+### Tooling & i18n (PRs 11-14)
+
+11. `feat(i18n): add next-intl with /[locale]/... routing`
+    - Install `next-intl`, wrap app in `NextIntlClientProvider`
+    - Move route groups under `app/[locale]/`
+    - Config: `locales: ['en'], defaultLocale: 'en'`
+
+12. `chore(seo): add sitemap.ts + robots.ts skeletons` — read site name from settings
+
+13. `chore(monitoring): wire Sentry + instrumentation.ts`
+
+14. `chore(test): vitest config + Playwright login smoke`
+    - 1 BFF route unit test (mock WP response)
+    - 1 component test (auth form)
+    - E2E: login → dashboard → logout flow
+
+15. `docs: update README with BFF architecture, env vars, security model`
+
+**After PR #15 lands, Phase 1 is unblocked.**
 
 ### Backend Tickets to File Now
 
@@ -1121,12 +1495,14 @@ These block Phase 1 / Phase 3 — file them immediately:
 ## 14. Reference Map
 
 - **API Reference (extracted from source):** `./API_REFERENCE.md` — **authoritative, verified against actual plugin code**
-- API planning document: `/Users/codeentechnologies/Sites/lms-site/wp-content/plugins/lms-backend-rest-api/LMS_API_PLAN.md`
-- Frontend usage examples: `/Users/codeentechnologies/Sites/lms-site/wp-content/plugins/lms-backend-rest-api/FRONTEND_REST_API_GUIDE.md`
-- Plugin entry: `/Users/codeentechnologies/Sites/lms-site/wp-content/plugins/lms-backend-rest-api/lms-backend-rest-api.php`
-- Routes: `…/includes/Routes.php`
-- Controllers: `…/includes/Api/Controllers/`
-- Models: `…/includes/Api/Models/`
+- API planning document: `<plugin-root>/LMS_API_PLAN.md`
+- Frontend usage examples: `<plugin-root>/FRONTEND_REST_API_GUIDE.md`
+- Plugin entry: `<plugin-root>/lms-backend-rest-api.php`
+- Routes: `<plugin-root>/includes/Routes.php`
+- Controllers: `<plugin-root>/includes/Api/Controllers/`
+- Models: `<plugin-root>/includes/Api/Models/`
+
+> **Note:** `<plugin-root>` refers to your local WordPress installation at `wp-content/plugins/lms-backend-rest-api/`. Clone from <https://github.com/Codezen-technology/wp-lms-backend-rest-api>.
 - Live site to replicate: <https://trainingexcellence.org.uk/>
 - WPLMS function reference: §"WPLMS Function Reference" in `LMS_API_PLAN.md`
 - Certificate plugin (legacy fallback): `wp-content/plugins/wplms-certificate-automation-aws-support`

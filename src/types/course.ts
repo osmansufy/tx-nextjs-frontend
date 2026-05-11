@@ -1,4 +1,4 @@
-import type { Lesson, LessonSummary } from "./lesson";
+import type { Unit, UnitSummary } from "./unit";
 
 export interface CourseCategory {
   id: number;
@@ -26,6 +26,8 @@ export interface Course {
   isFree?: boolean;
   level?: CourseLevel;
   durationSeconds?: number;
+  /** Curriculum item count (API may still call these "lessons"). */
+  unitsCount?: number;
   lessonsCount?: number;
   studentsCount?: number;
   rating?: number;
@@ -39,18 +41,18 @@ export interface Course {
 export interface CourseSection {
   id: number | string;
   title: string;
-  lessons: LessonSummary[];
+  units: UnitSummary[];
 }
 
 export interface CourseCurriculum {
   courseId: number;
   sections: CourseSection[];
-  totalLessons: number;
+  totalUnits: number;
 }
 
 export interface CourseDetail extends Course {
   curriculum?: CourseSection[];
-  firstLesson?: Lesson | LessonSummary;
+  firstUnit?: Unit | UnitSummary;
 }
 
 export interface CourseListFilters {

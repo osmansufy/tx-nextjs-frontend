@@ -2,35 +2,142 @@ import { env } from "@/lib/env";
 
 const lms = `/${env.LMS_NAMESPACE}`;
 const wp = `/wp/v2`;
-const jwt = `/jwt-auth/v1`;
+const swca = `/swca/v1`;
 
 export const endpoints = {
   auth: {
-    token: `${jwt}/token`,
-    validate: `${jwt}/token/validate`,
-    register: `${wp}/users/register`,
-    me: `${wp}/users/me`,
+    login: `${lms}/auth/login`,
+    register: `${lms}/auth/register`,
+    logout: `${lms}/auth/logout`,
+    refresh: `${lms}/auth/refresh`,
+    forgotPassword: `${lms}/auth/forgot-password`,
+    resetPassword: `${lms}/auth/reset-password`,
+  },
+  user: {
+    me: `${lms}/users/me`,
+    updateMe: `${lms}/users/me`,
+    avatar: `${lms}/users/me/avatar`,
+    enrollments: `${lms}/users/me/enrollments`,
+    progress: `${lms}/users/me/progress`,
+    certificates: `${lms}/users/me/certificates`,
+    badges: `${lms}/users/me/badges`,
+    notifications: `${lms}/users/me/notifications`,
+    publicProfile: (id: number) => `${lms}/users/${id}`,
   },
   courses: {
     list: `${lms}/courses`,
     detail: (idOrSlug: string | number) => `${lms}/courses/${idOrSlug}`,
+    search: `${lms}/courses/search`,
+    featured: `${lms}/courses/featured`,
+    popular: `${lms}/courses/popular`,
+    free: `${lms}/courses/free`,
     curriculum: (idOrSlug: string | number) => `${lms}/courses/${idOrSlug}/curriculum`,
-    progress: (id: number) => `${lms}/courses/${id}/progress`,
-    categories: `${lms}/categories`,
+    instructors: (id: number) => `${lms}/courses/${id}/instructors`,
+    enroll: (courseId: number) => `${lms}/courses/${courseId}/enroll`,
   },
-  lessons: {
-    detail: (id: number) => `${lms}/lessons/${id}`,
-    complete: (id: number) => `${lms}/lessons/${id}/complete`,
-    uncomplete: (id: number) => `${lms}/lessons/${id}/uncomplete`,
+  units: {
+    list: `${lms}/units`,
+    detail: (id: number) => `${lms}/units/${id}`,
+    content: (id: number) => `${lms}/units/${id}/content`,
+    complete: (id: number) => `${lms}/units/${id}/complete`,
+  },
+  quizzes: {
+    list: `${lms}/quizzes`,
+    detail: (id: number) => `${lms}/quizzes/${id}`,
+    questions: (id: number) => `${lms}/quizzes/${id}/questions`,
+    start: (id: number) => `${lms}/quizzes/${id}/start`,
+    submit: (id: number) => `${lms}/quizzes/${id}/submit`,
+    results: (id: number) => `${lms}/quizzes/${id}/results`,
+  },
+  assignments: {
+    list: `${lms}/assignments`,
+    detail: (id: number) => `${lms}/assignments/${id}`,
+    submit: (id: number) => `${lms}/assignments/${id}/submit`,
+    status: (id: number) => `${lms}/assignments/${id}/status`,
+    grade: (id: number) => `${lms}/assignments/${id}/grade`,
   },
   enrollments: {
-    create: `${lms}/enrollments`,
-    me: `${lms}/enrollments/me`,
-    detail: (id: number) => `${lms}/enrollments/${id}`,
-    delete: (id: number) => `${lms}/enrollments/${id}`,
+    enroll: (courseId: number) => `${lms}/courses/${courseId}/enroll`,
+    me: `${lms}/users/me/enrollments`,
   },
-  user: {
-    me: `${wp}/users/me`,
-    update: `${wp}/users/me`,
+  progress: {
+    all: `${lms}/users/me/progress`,
+    course: (courseId: number) => `${lms}/users/me/courses/${courseId}/progress`,
+  },
+  reviews: {
+    list: `${lms}/reviews`,
+    courseReviews: (courseId: number) => `${lms}/courses/${courseId}/reviews`,
+    mine: `${lms}/reviews/my-reviews`,
+    update: (id: number) => `${lms}/reviews/${id}`,
+    delete: (id: number) => `${lms}/reviews/${id}`,
+  },
+  taxonomy: {
+    courseCategories: `${lms}/course-categories`,
+    tags: `${lms}/tags`,
+    levels: `${lms}/levels`,
+  },
+  cart: {
+    get: `${lms}/cart`,
+    addItem: `${lms}/cart/items`,
+    updateItem: (key: string) => `${lms}/cart/items/${key}`,
+    removeItem: (key: string) => `${lms}/cart/items/${key}`,
+    applyCoupon: `${lms}/cart/coupon`,
+    removeCoupon: (code: string) => `${lms}/cart/coupon/${code}`,
+    empty: `${lms}/cart`,
+  },
+  orders: {
+    create: `${lms}/orders`,
+    list: `${lms}/orders`,
+    detail: (id: number) => `${lms}/orders/${id}`,
+    items: (id: number) => `${lms}/orders/${id}/items`,
+    pay: (id: number) => `${lms}/orders/${id}/pay`,
+  },
+  payment: {
+    methods: `${lms}/payment/methods`,
+    intent: `${lms}/payment/intent`,
+  },
+  bundles: {
+    list: `${lms}/bundles`,
+    detail: (id: number) => `${lms}/bundles/${id}`,
+    featured: `${lms}/bundles/featured`,
+  },
+  instructors: {
+    list: `${lms}/instructors`,
+    detail: (id: number) => `${lms}/instructors/${id}`,
+    courses: (id: number) => `${lms}/instructors/${id}/courses`,
+    reviews: (id: number) => `${lms}/instructors/${id}/reviews`,
+  },
+  certificates: {
+    verify: `${lms}/certificates/verify`,
+    legacyVerify: `${swca}/get-certificate`,
+  },
+  search: {
+    unified: `${lms}/search`,
+    suggestions: `${lms}/search/suggestions`,
+  },
+  media: {
+    upload: `${lms}/media`,
+    delete: (id: number) => `${lms}/media/${id}`,
+  },
+  blog: {
+    posts: `${wp}/posts`,
+    post: (slug: string) => `${wp}/posts?slug=${encodeURIComponent(slug)}`,
+    pages: `${wp}/pages`,
+    categories: `${wp}/categories`,
+  },
+  settings: {
+    get: `${lms}/settings`,
+  },
+  memberships: {
+    plans: `${lms}/memberships/plans`,
+    subscribe: `${lms}/memberships/subscribe`,
+    cancel: `${lms}/memberships/cancel`,
+    myMembership: `${lms}/users/me/membership`,
+  },
+  partners: {
+    list: `${wp}/partner_logo`,
+  },
+  testimonials: {
+    list: `${wp}/testimonial`,
   },
 } as const;

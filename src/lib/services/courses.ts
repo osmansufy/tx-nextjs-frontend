@@ -9,6 +9,7 @@ import type {
   CourseListFilters,
   CourseSection,
 } from "@/types/course";
+import type { UnitSummary } from "@/types/unit";
 import type { PaginatedResponse, WpRendered } from "@/types/api";
 
 interface RawCourse {
@@ -31,7 +32,9 @@ interface RawCourse {
   duration_seconds?: number;
   total_duration?: number;
   lessons_count?: number;
+  units_count?: number;
   total_lessons?: number;
+  total_units?: number;
   students_count?: number;
   total_students?: number;
   rating?: number;
@@ -60,6 +63,22 @@ const renderedOrString = (v: unknown): string => {
   return "";
 };
 
+function normalizeUnitSummaryFromCurriculum(raw: Record<string, unknown>): UnitSummary {
+  const id = Number(raw.id);
+  const title = renderedOrString(raw.title) || "Unit";
+  return {
+    id: Number.isFinite(id) ? id : 0,
+    slug: typeof raw.slug === "string" ? raw.slug : undefined,
+    title,
+    type: raw.type as UnitSummary["type"],
+    durationSeconds:
+      (raw.duration_seconds as number | undefined) ?? (raw.duration as number | undefined),
+    isCompleted: raw.is_completed as boolean | undefined,
+    isFreePreview: (raw.is_free_preview as boolean | undefined) ?? (raw.free_preview as boolean),
+    order: raw.order as number | undefined,
+  };
+}
+
 export function normalizeCourse(raw: RawCourse): Course {
   const price =
     typeof raw.price === "string" ? Number(raw.price) || undefined : (raw.price as number | undefined);
@@ -75,7 +94,8 @@ export function normalizeCourse(raw: RawCourse): Course {
     isFree: raw.is_free ?? raw.free ?? (price !== undefined ? price === 0 : undefined),
     level: (raw.level as Course["level"]) ?? undefined,
     durationSeconds: raw.duration_seconds ?? raw.duration ?? raw.total_duration,
-    lessonsCount: raw.lessons_count ?? raw.total_lessons,
+    unitsCount: raw.units_count ?? raw.lessons_count ?? raw.total_units ?? raw.total_lessons,
+    lessonsCount: raw.lessons_count ?? raw.total_lessons ?? raw.units_count ?? raw.total_units,
     studentsCount: raw.students_count ?? raw.total_students,
     rating: raw.rating,
     ratingCount: raw.rating_count,
@@ -122,25 +142,47 @@ export const coursesService = {
 
   async curriculum(idOrSlug: string | number): Promise<CourseCurriculum> {
     const { data } = await api.get<{
-      sections?: CourseSection[];
-      data?: CourseSection[];
+      sections?: Array<{
+        id: number | string;
+        title: string;
+        lessons?: Record<string, unknown>[];
+        units?: Record<string, unknown>[];
+      }>;
+      data?: Array<{
+        id: number | string;
+        title: string;
+        lessons?: Record<string, unknown>[];
+        units?: Record<string, unknown>[];
+      }>;
       total_lessons?: number;
+      total_units?: number;
       course_id?: number;
     }>(endpoints.courses.curriculum(idOrSlug));
 
-    const sections = (data.sections ?? data.data ?? []) as CourseSection[];
-    const totalLessons =
-      data.total_lessons ?? sections.reduce((acc, s) => acc + (s.lessons?.length ?? 0), 0);
+    const rawSections = data.sections ?? data.data ?? [];
+    const sections: CourseSection[] = rawSections.map((sec) => {
+      const items = (sec.units ?? sec.lessons ?? []) as Record<string, unknown>[];
+      return {
+        id: sec.id,
+        title: sec.title,
+        units: items.map(normalizeUnitSummaryFromCurriculum),
+      };
+    });
+
+    const totalUnits =
+      data.total_units ??
+      data.total_lessons ??
+      sections.reduce((acc, s) => acc + s.units.length, 0);
 
     return {
       courseId: data.course_id ?? (Number(idOrSlug) || 0),
       sections,
-      totalLessons,
+      totalUnits,
     };
   },
 
   async categories(): Promise<CourseCategory[]> {
-    const { data } = await api.get<CourseCategory[]>(endpoints.courses.categories);
+    const { data } = await api.get<CourseCategory[]>(endpoints.taxonomy.courseCategories);
     return data;
   },
 };

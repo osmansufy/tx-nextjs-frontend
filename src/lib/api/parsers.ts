@@ -7,25 +7,39 @@ import type { PaginatedResponse } from "@/types/api";
  * response headers, but custom LMS endpoints sometimes return an envelope
  * `{ items, total, total_pages }` instead. We tolerate both.
  */
+type ListEnvelope<T> = {
+  items?: T[];
+  data?: T[];
+  total?: number;
+  total_pages?: number;
+  totalPages?: number;
+  page?: number;
+  per_page?: number;
+  perPage?: number;
+};
+
 export function paginate<T>(
-  res: AxiosResponse<T[] | { items?: T[]; data?: T[]; total?: number; total_pages?: number }>,
+  res: AxiosResponse<T[] | ListEnvelope<T>>,
   fallbackPage = 1,
   fallbackPerPage = 12,
 ): PaginatedResponse<T> {
-  const data = res.data as
-    | T[]
-    | { items?: T[]; data?: T[]; total?: number; total_pages?: number };
+  const data = res.data as T[] | ListEnvelope<T>;
 
   let items: T[] = [];
   let total: number | undefined;
   let totalPages: number | undefined;
+  let page = fallbackPage;
+  let perPage = fallbackPerPage;
 
   if (Array.isArray(data)) {
     items = data;
   } else {
     items = (data.items ?? data.data ?? []) as T[];
     total = data.total;
-    totalPages = data.total_pages;
+    totalPages = data.total_pages ?? data.totalPages;
+    if (typeof data.page === "number") page = data.page;
+    const pp = data.per_page ?? data.perPage;
+    if (typeof pp === "number") perPage = pp;
   }
 
   const headerTotal = Number(res.headers["x-wp-total"]);
@@ -36,8 +50,8 @@ export function paginate<T>(
     total: total ?? (Number.isFinite(headerTotal) ? headerTotal : items.length),
     totalPages:
       totalPages ?? (Number.isFinite(headerTotalPages) ? headerTotalPages : 1),
-    page: fallbackPage,
-    perPage: fallbackPerPage,
+    page,
+    perPage,
   };
 }
 

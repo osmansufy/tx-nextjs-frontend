@@ -1,36 +1,52 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { authService } from "@/lib/services/auth";
+import { userService } from "@/lib/services/user";
 import { useAuthStore } from "@/lib/stores/auth.store";
 import { queryKeys } from "@/lib/utils/query-keys";
+import { hasUserLoggedInCookie } from "@/lib/api/bff-client";
 import type { LoginInput, RegisterInput } from "@/lib/schemas/auth";
 import type { ApiError } from "@/lib/api/error";
+import type { WpUser } from "@/types/user";
+
+function wpUserToAuthUser(u: WpUser) {
+  return {
+    email: u.email ?? "",
+    displayName: u.name ?? u.username ?? u.user_nicename ?? "",
+    nicename: u.slug ?? u.username ?? u.user_nicename ?? "",
+  };
+}
 
 export function useAuth() {
-  const token = useAuthStore((s) => s.token);
   const user = useAuthStore((s) => s.user);
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
+  const [cookieAuthed, setCookieAuthed] = useState(false);
+
+  useEffect(() => {
+    setCookieAuthed(hasUserLoggedInCookie());
+  }, [user]);
+
   return {
-    token,
     user,
-    isAuthenticated: Boolean(token),
+    isAuthenticated: Boolean(user) || cookieAuthed,
     hasHydrated,
   };
 }
 
 export function useLogin() {
-  const setSession = useAuthStore((s) => s.setSession);
+  const setUser = useAuthStore((s) => s.setUser);
   const router = useRouter();
   const search = useSearchParams();
   const qc = useQueryClient();
 
   return useMutation({
     mutationFn: (input: LoginInput) => authService.login(input),
-    onSuccess: ({ token, user }) => {
-      setSession({ token, user });
+    onSuccess: ({ user }) => {
+      setUser(user);
       qc.invalidateQueries({ queryKey: queryKeys.user.me });
       qc.invalidateQueries({ queryKey: queryKeys.enrollments.me });
       toast.success(`Welcome back, ${user.displayName}`);
@@ -44,25 +60,26 @@ export function useLogin() {
 }
 
 export function useRegister() {
+  const setUser = useAuthStore((s) => s.setUser);
   const router = useRouter();
+  const qc = useQueryClient();
 
   return useMutation({
     mutationFn: async (input: RegisterInput) => {
-      const created = await authService.register({
-        username: input.username,
-        email: input.email,
-        password: input.password,
-      });
-      const session = await authService.login({
-        username: input.username,
-        password: input.password,
-      });
-      return { created, session };
+      const { confirmPassword: _c, ...payload } = input;
+      return authService.register(payload);
     },
-    onSuccess: ({ session }) => {
-      useAuthStore.getState().setSession(session);
-      toast.success("Account created. Welcome to the platform!");
-      router.replace("/dashboard");
+    onSuccess: ({ user }) => {
+      qc.invalidateQueries({ queryKey: queryKeys.user.me });
+      qc.invalidateQueries({ queryKey: queryKeys.enrollments.me });
+      if (hasUserLoggedInCookie()) {
+        setUser(user);
+        toast.success("Account created. Welcome to the platform!");
+        router.replace("/dashboard");
+      } else {
+        toast.success("Account created. Please sign in.");
+        router.replace("/login");
+      }
     },
     onError: (err: ApiError) => {
       toast.error(err.message || "Could not register. Try a different username or email.");
@@ -71,23 +88,39 @@ export function useRegister() {
 }
 
 export function useLogout() {
-  const logout = useAuthStore((s) => s.logout);
+  const logoutStore = useAuthStore((s) => s.logout);
   const router = useRouter();
   const qc = useQueryClient();
   return () => {
-    logout();
-    qc.clear();
-    toast.success("Signed out");
-    router.replace("/");
+    void (async () => {
+      try {
+        await authService.logout();
+      } catch {
+        /* still clear client state */
+      }
+      logoutStore();
+      qc.clear();
+      toast.success("Signed out");
+      router.replace("/");
+    })();
   };
 }
 
 export function useMe(enabled = true) {
-  const isAuthed = useAuthStore((s) => Boolean(s.token));
+  const user = useAuthStore((s) => s.user);
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
+  const setUser = useAuthStore((s) => s.setUser);
+  const canFetch =
+    hasHydrated && (Boolean(user) || (typeof window !== "undefined" && hasUserLoggedInCookie()));
+
   return useQuery({
     queryKey: queryKeys.user.me,
-    queryFn: () => authService.me(),
-    enabled: enabled && isAuthed,
+    queryFn: async () => {
+      const u = await userService.me();
+      setUser(wpUserToAuthUser(u));
+      return u;
+    },
+    enabled: enabled && canFetch,
     staleTime: 60_000,
   });
 }

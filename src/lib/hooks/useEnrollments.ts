@@ -4,16 +4,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { enrollmentService } from "@/lib/services/enrollment";
 import { queryKeys } from "@/lib/utils/query-keys";
-import { useAuthStore } from "@/lib/stores/auth.store";
 import type { Enrollment } from "@/types/enrollment";
 import type { ApiError } from "@/lib/api/error";
 
 export function useMyEnrollments(opts?: { enabled?: boolean }) {
-  const isAuthed = useAuthStore((s) => Boolean(s.token));
   return useQuery({
     queryKey: queryKeys.enrollments.me,
     queryFn: () => enrollmentService.listMine(),
-    enabled: (opts?.enabled ?? true) && isAuthed,
+    enabled: opts?.enabled ?? true,
     staleTime: 30_000,
   });
 }
@@ -35,7 +33,7 @@ export function useEnroll() {
         status: "active",
         progress: 0,
         enrolledAt: new Date().toISOString(),
-        lastAccessedLessonId: null,
+        lastAccessedUnitId: null,
       };
       qc.setQueryData<Enrollment[]>(queryKeys.enrollments.me, (old) => [optimistic, ...(old ?? [])]);
       return { prev };

@@ -1,13 +1,5 @@
-import { api } from "@/lib/api/client";
-import { endpoints } from "@/lib/api/endpoints";
+import { bffJson } from "@/lib/api/bff-client";
 import type { AuthUser, WpUser } from "@/types/user";
-
-interface JwtTokenResponse {
-  token: string;
-  user_email: string;
-  user_nicename: string;
-  user_display_name: string;
-}
 
 interface RegisterPayload {
   username: string;
@@ -16,37 +8,39 @@ interface RegisterPayload {
 }
 
 export const authService = {
-  async login(input: { username: string; password: string }): Promise<{
-    token: string;
-    user: AuthUser;
-  }> {
-    const { data } = await api.post<JwtTokenResponse>(endpoints.auth.token, input);
-    return {
-      token: data.token,
-      user: {
-        email: data.user_email,
-        displayName: data.user_display_name,
-        nicename: data.user_nicename,
-      },
-    };
+  async login(input: { username: string; password: string }): Promise<{ user: AuthUser }> {
+    return bffJson<{ user: AuthUser }>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
   },
 
-  async validate(): Promise<boolean> {
-    try {
-      await api.post(endpoints.auth.validate);
-      return true;
-    } catch {
-      return false;
-    }
+  async logout(): Promise<void> {
+    await bffJson<{ ok: boolean }>("/api/auth/logout", { method: "POST" });
   },
 
-  async register(payload: RegisterPayload): Promise<WpUser> {
-    const { data } = await api.post<WpUser>(endpoints.auth.register, payload);
-    return data;
+  async register(payload: RegisterPayload): Promise<{ user: AuthUser }> {
+    return bffJson<{ user: AuthUser }>("/api/auth/register", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
   },
 
   async me(): Promise<WpUser> {
-    const { data } = await api.get<WpUser>(endpoints.auth.me);
-    return data;
+    return bffJson<WpUser>("/api/users/me", { method: "GET" });
+  },
+
+  async forgotPassword(email: string): Promise<void> {
+    await bffJson<{ ok: boolean }>("/api/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  async resetPassword(input: { key: string; login: string; password: string }): Promise<void> {
+    await bffJson<{ ok: boolean }>("/api/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
   },
 };

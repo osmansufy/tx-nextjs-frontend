@@ -58,10 +58,11 @@ export function CourseCard({ course }: CourseCardProps) {
 
       <CardContent className="flex-1 pb-4">
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-          {course.lessonsCount ? (
+          {(course.unitsCount ?? course.lessonsCount) ? (
             <span className="inline-flex items-center gap-1">
               <GraduationCap className="h-3 w-3" />
-              {course.lessonsCount} {pluralize(course.lessonsCount, "lesson")}
+              {course.unitsCount ?? course.lessonsCount}{" "}
+              {pluralize(course.unitsCount ?? course.lessonsCount ?? 0, "unit")}
             </span>
           ) : null}
           {course.durationSeconds ? (

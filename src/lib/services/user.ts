@@ -1,5 +1,4 @@
-import { api } from "@/lib/api/client";
-import { endpoints } from "@/lib/api/endpoints";
+import { bffJson } from "@/lib/api/bff-client";
 import type { WpUser } from "@/types/user";
 
 interface UpdateMePayload {
@@ -14,12 +13,13 @@ interface UpdateMePayload {
 
 export const userService = {
   async me(): Promise<WpUser> {
-    const { data } = await api.get<WpUser>(endpoints.user.me);
-    return data;
+    return bffJson<WpUser>("/api/users/me", { method: "GET" });
   },
 
   async updateMe(payload: UpdateMePayload): Promise<WpUser> {
-    const { data } = await api.post<WpUser>(endpoints.user.update, payload);
-    return data;
+    return bffJson<WpUser>("/api/users/me", {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
   },
 };

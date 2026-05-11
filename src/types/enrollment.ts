@@ -8,18 +8,18 @@ export interface Enrollment {
   course?: Course;
   status: EnrollmentStatus;
   progress?: number;
-  completedLessons?: number;
-  totalLessons?: number;
+  completedUnits?: number;
+  totalUnits?: number;
   enrolledAt: string;
   completedAt?: string | null;
-  lastAccessedLessonId?: number | null;
+  lastAccessedUnitId?: number | null;
 }
 
 export interface CourseProgress {
   courseId: number;
-  completedLessons: number;
-  totalLessons: number;
+  completedUnits: number;
+  totalUnits: number;
   percent: number;
-  completedLessonIds: number[];
-  lastLessonId?: number | null;
+  completedUnitIds: number[];
+  lastUnitId?: number | null;
 }

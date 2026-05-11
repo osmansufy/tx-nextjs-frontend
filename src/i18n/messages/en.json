@@ -1,0 +1,28 @@
+{
+  "site": {
+    "loading": "Loading…",
+    "error": "Something went wrong",
+    "notFound": "Page not found"
+  },
+  "auth": {
+    "login": "Sign in",
+    "register": "Create account",
+    "logout": "Sign out",
+    "forgotPassword": "Forgot password?",
+    "resetPassword": "Reset password"
+  },
+  "courses": {
+    "enroll": "Enroll",
+    "enrollFree": "Enroll for free",
+    "continueLearning": "Continue learning",
+    "startLearning": "Start learning",
+    "unit": "unit",
+    "units": "units"
+  },
+  "nav": {
+    "courses": "Courses",
+    "pricing": "Pricing",
+    "blog": "Blog",
+    "dashboard": "Dashboard"
+  }
+}

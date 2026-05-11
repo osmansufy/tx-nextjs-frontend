@@ -40,9 +40,9 @@ export function EnrollButton({ courseId, isFree, price }: EnrollButtonProps) {
   }
 
   if (enrolled) {
-    const lastLesson = enrolled.lastAccessedLessonId;
-    const target = lastLesson
-      ? `/learn/${courseId}/${lastLesson}`
+    const lastUnit = enrolled.lastAccessedUnitId;
+    const target = lastUnit
+      ? `/learn/${courseId}/${lastUnit}`
       : `/learn/${courseId}/start`;
     return (
       <Button size="lg" asChild>

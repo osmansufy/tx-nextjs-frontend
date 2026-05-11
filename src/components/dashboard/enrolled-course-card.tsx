@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useCourse } from "@/lib/hooks/useCourses";
-import { useCourseProgress } from "@/lib/hooks/useLessons";
+import { useCourseProgress } from "@/lib/hooks/useUnits";
 import { formatDate, pluralize } from "@/lib/utils/format";
 import type { Enrollment } from "@/types/enrollment";
 
@@ -27,8 +27,9 @@ export function EnrolledCourseCard({ enrollment }: EnrolledCourseCardProps) {
   const percent =
     progress?.percent ??
     (enrollment.progress !== undefined ? Math.round(enrollment.progress) : 0);
-  const completed = progress?.completedLessons ?? enrollment.completedLessons ?? 0;
-  const total = progress?.totalLessons ?? enrollment.totalLessons ?? c?.lessonsCount ?? 0;
+  const completed = progress?.completedUnits ?? enrollment.completedUnits ?? 0;
+  const total =
+    progress?.totalUnits ?? enrollment.totalUnits ?? c?.unitsCount ?? c?.lessonsCount ?? 0;
 
   if (isLoading && !c) {
     return (
@@ -45,8 +46,8 @@ export function EnrolledCourseCard({ enrollment }: EnrolledCourseCardProps) {
 
   if (!c) return null;
 
-  const targetUrl = enrollment.lastAccessedLessonId
-    ? `/learn/${c.id}/${enrollment.lastAccessedLessonId}`
+  const targetUrl = enrollment.lastAccessedUnitId
+    ? `/learn/${c.id}/${enrollment.lastAccessedUnitId}`
     : `/learn/${c.id}/start`;
 
   return (
@@ -87,7 +88,7 @@ export function EnrolledCourseCard({ enrollment }: EnrolledCourseCardProps) {
         <div className="space-y-1.5">
           <Progress value={percent} />
           <p className="text-xs text-muted-foreground">
-            {completed}/{total} {pluralize(total, "lesson")} \u2022 {percent}%
+            {completed}/{total} {pluralize(total, "unit")} \u2022 {percent}%
           </p>
         </div>
 

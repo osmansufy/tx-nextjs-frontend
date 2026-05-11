@@ -9,11 +9,13 @@ export const queryKeys = {
     list: (filters: CourseListFilters = {}) => ["courses", "list", filters] as const,
     detail: (slugOrId: string | number) => ["courses", "detail", slugOrId] as const,
     curriculum: (id: number | string) => ["courses", "curriculum", id] as const,
-    progress: (id: number) => ["courses", "progress", id] as const,
     categories: ["courses", "categories"] as const,
   },
-  lessons: {
-    detail: (id: number) => ["lessons", "detail", id] as const,
+  units: {
+    detail: (id: number) => ["units", "detail", id] as const,
+  },
+  progress: {
+    course: (id: number) => ["progress", "course", id] as const,
   },
   enrollments: {
     me: ["enrollments", "me"] as const,

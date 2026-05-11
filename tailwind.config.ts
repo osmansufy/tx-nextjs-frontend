@@ -18,6 +18,22 @@ const config: Config = {
     },
     extend: {
       colors: {
+        /**
+         * Training Excellence brand palette — sourced directly from Figma design system.
+         * Use `brand-500` (#00bbf0) as the primary CTA colour.
+         */
+        brand: {
+          50: "#e6f8fe",
+          100: "#b0eafa",
+          200: "#8ae0f8",
+          300: "#54d1f5",
+          400: "#33c9f3",
+          500: "#00bbf0",  // ← primary brand cyan
+          600: "#00aada",
+          700: "#0085aa",
+          800: "#006784",
+          900: "#004f65",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

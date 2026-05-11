@@ -7,6 +7,7 @@ export interface AuthUser {
 export interface WpUser {
   id: number;
   username?: string;
+  user_nicename?: string;
   name: string;
   first_name?: string;
   last_name?: string;
@@ -14,7 +15,7 @@ export interface WpUser {
   url?: string;
   description?: string;
   link?: string;
-  slug: string;
+  slug?: string;
   avatar_urls?: Record<string, string>;
   meta?: Record<string, unknown>;
   roles?: string[];

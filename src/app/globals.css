@@ -2,72 +2,79 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Brand palette (sourced from Figma design system — node 83:3864) ────────
-   primary-500 = #00bbf0  →  hsl(193 100% 47%)   ← the Training Excellence brand cyan
+/* ─── Training Excellence Design System ───────────────────────────────────────
+   Colours sourced from Figma: VoTEBKr8x4fWlObjkr7RXg
+     Primary   (cyan/teal)  node 83:3864  —  primary-500  = #00bbf0  hsl(193 100% 47%)
+     Secondary (gold/amber) node 83:4218  —  secondary-500 = #9e6f21 hsl(35 65% 37%)
+     Neutral   (slate/navy) node 83:3987  —  neutral-900  = #00204a  hsl(215 100% 18%)
    ─────────────────────────────────────────────────────────────────────────── */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 200 97% 14%;          /* primary-900 #004f65 — dark navy for text */
+    /* Backgrounds */
+    --background: 0 0% 100%;                    /* neutral-0  #ffffff  */
+    --foreground: 215 100% 15%;                 /* neutral-900 #00204a */
 
     --card: 0 0% 100%;
-    --card-foreground: 200 97% 14%;
+    --card-foreground: 215 100% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 200 97% 14%;
+    --popover-foreground: 215 100% 15%;
 
-    /* Primary = brand cyan (#00bbf0) */
+    /* Primary — brand cyan: primary-500 #00bbf0 */
     --primary: 193 100% 47%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 193 100% 94%;          /* primary-50 #e6f8fe */
-    --secondary-foreground: 200 97% 20%;
+    /* Secondary — brand gold: secondary-500 #9e6f21 */
+    --secondary: 35 65% 37%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 193 60% 95%;
-    --muted-foreground: 200 20% 45%;
+    --muted: 215 20% 94%;                       /* neutral-20 #f5f6f8 */
+    --muted-foreground: 215 20% 55%;            /* neutral-200 #667992 */
 
-    --accent: 193 100% 94%;             /* primary-50 tint */
-    --accent-foreground: 200 97% 20%;
+    --accent: 193 100% 94%;                     /* primary-50 #e6f8fe */
+    --accent-foreground: 193 100% 16%;          /* primary-900 #004f65 */
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 210 20% 90%;
-    --input: 210 20% 90%;
-    --ring: 193 100% 47%;
+    --border: 215 20% 88%;                      /* neutral-40 #dee2e7 */
+    --input: 215 20% 88%;
+    --ring: 193 100% 47%;                       /* primary-500 */
 
     --radius: 0.5rem;
   }
 
   .dark {
-    --background: 200 97% 8%;           /* deep navy */
-    --foreground: 193 100% 94%;
+    /* Backgrounds — deep navy from neutral palette */
+    --background: 215 100% 15%;                 /* neutral-900 #00204a */
+    --foreground: 215 20% 94%;                  /* neutral-20 #f5f6f8 */
 
-    --card: 200 50% 12%;
-    --card-foreground: 193 100% 94%;
+    --card: 215 80% 20%;                        /* neutral-800 #0d2b53 */
+    --card-foreground: 215 20% 94%;
 
-    --popover: 200 50% 12%;
-    --popover-foreground: 193 100% 94%;
+    --popover: 215 80% 20%;
+    --popover-foreground: 215 20% 94%;
 
-    /* Primary slightly lighter in dark mode (#00aada primary-600) */
-    --primary: 193 100% 43%;
-    --primary-foreground: 0 0% 100%;
+    /* Primary slightly muted in dark mode: primary-400 #33c9f3 */
+    --primary: 193 90% 58%;
+    --primary-foreground: 215 100% 15%;
 
-    --secondary: 200 50% 16%;
-    --secondary-foreground: 193 100% 90%;
+    /* Secondary — warm gold, unchanged */
+    --secondary: 35 65% 37%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 200 40% 14%;
-    --muted-foreground: 200 20% 60%;
+    --muted: 215 50% 22%;                       /* neutral-700 #1c395e */
+    --muted-foreground: 215 20% 65%;            /* neutral-100 #75879d */
 
-    --accent: 200 40% 16%;
-    --accent-foreground: 193 100% 90%;
+    --accent: 215 50% 22%;
+    --accent-foreground: 193 100% 80%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 200 40% 18%;
-    --input: 200 40% 18%;
-    --ring: 193 100% 43%;
+    --border: 215 50% 26%;                      /* neutral-600 #2e486b */
+    --input: 215 50% 26%;
+    --ring: 193 90% 58%;
   }
 }
 

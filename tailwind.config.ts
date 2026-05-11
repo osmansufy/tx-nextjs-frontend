@@ -18,35 +18,70 @@ const config: Config = {
     },
     extend: {
       colors: {
-        /**
-         * Training Excellence brand palette — sourced directly from Figma design system.
-         * Use `brand-500` (#00bbf0) as the primary CTA colour.
-         */
-        brand: {
-          50: "#e6f8fe",
+        // ─── Training Excellence Design System ────────────────────────────────
+        // Sourced directly from Figma: VoTEBKr8x4fWlObjkr7RXg (nodes 83-3864, 83-4218, 83-3987)
+
+        /** Primary palette — cyan/teal brand colour. primary-500 (#00bbf0) is the main CTA. */
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+          50:  "#e6f8fe",
           100: "#b0eafa",
           200: "#8ae0f8",
           300: "#54d1f5",
           400: "#33c9f3",
-          500: "#00bbf0",  // ← primary brand cyan
+          500: "#00bbf0",
           600: "#00aada",
           700: "#0085aa",
           800: "#006784",
           900: "#004f65",
         },
+
+        /** Secondary palette — warm gold/amber brand colour. secondary-500 (#9e6f21) is the accent CTA. */
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+          50:  "#f5f1e9",
+          100: "#e1d2ba",
+          200: "#d2bd99",
+          300: "#be9f6a",
+          400: "#b18c4d",
+          500: "#9e6f21",
+          600: "#90651e",
+          700: "#704f17",
+          800: "#573d12",
+          900: "#422f0e",
+        },
+
+        /** Neutral palette — slate/navy greyscale. */
+        neutral: {
+          0:   "#ffffff",
+          10:  "#fafbfb",
+          20:  "#f5f6f8",
+          30:  "#ebedf1",
+          40:  "#dee2e7",
+          50:  "#bfc7d2",
+          60:  "#b0bac7",
+          70:  "#a3afbe",
+          80:  "#94a1b3",
+          90:  "#8594a8",
+          100: "#75879d",
+          200: "#667992",
+          300: "#576c88",
+          400: "#4a617e",
+          500: "#3b5374",
+          600: "#2e486b",
+          700: "#1c395e",
+          800: "#0d2b53",
+          900: "#00204a",
+        },
+
+        // ─── shadcn/ui semantic tokens (backed by CSS variables) ─────────────
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
-        primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
-        },
-        secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
-        },
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",

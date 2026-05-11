@@ -8,7 +8,6 @@
  *  - Throws `ServerFetchError` on non-2xx so RSC can call `notFound()` or `error.tsx`.
  */
 
-import "server-only";
 import { getServerWpJsonBase, env } from "@/lib/env";
 
 const lms = `/${env.LMS_NAMESPACE}`;
@@ -45,11 +44,7 @@ export type ApiPaginated<T> = {
 };
 
 /** Course status label — maps numeric WPLMS status codes to strings */
-export type ApiStatusLabel =
-  | "start_course"
-  | "continue_course"
-  | "under_evaluation"
-  | "evaluated";
+export type ApiStatusLabel = "start_course" | "continue_course" | "under_evaluation" | "evaluated";
 
 // ── Taxonomy ──────────────────────────────────────────────────────────────────
 
@@ -326,11 +321,7 @@ function unwrapEnvelope<T>(body: unknown): T {
   if (body && typeof body === "object" && "success" in body) {
     const env = body as { success?: boolean; data?: unknown; message?: string; code?: string };
     if (env.success === false) {
-      throw new ServerFetchError(
-        422,
-        env.code ?? "api_error",
-        env.message ?? "Request failed",
-      );
+      throw new ServerFetchError(422, env.code ?? "api_error", env.message ?? "Request failed");
     }
     return (env.data ?? null) as T;
   }
@@ -388,10 +379,10 @@ export const serverApi = {
       }),
 
     curriculum: (slug: string) =>
-      serverFetch<ApiCurriculumItem[]>(
-        `${lms}/courses/${encodeURIComponent(slug)}/curriculum`,
-        { revalidate: 600, tags: [`course:${slug}:curriculum`] },
-      ),
+      serverFetch<ApiCurriculumItem[]>(`${lms}/courses/${encodeURIComponent(slug)}/curriculum`, {
+        revalidate: 600,
+        tags: [`course:${slug}:curriculum`],
+      }),
 
     featured: (perPage?: number) =>
       serverFetch<ApiPaginated<ApiCourse>>(

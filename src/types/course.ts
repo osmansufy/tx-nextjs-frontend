@@ -4,6 +4,10 @@ export interface CourseCategory {
   id: number;
   name: string;
   slug: string;
+  description?: string;
+  count?: number;
+  parent?: number;
+  image?: string | null;
 }
 
 export interface CourseInstructor {
@@ -23,6 +27,7 @@ export interface Course {
   content?: string;
   featuredImage?: string;
   price?: number;
+  originalPrice?: number;
   isFree?: boolean;
   level?: CourseLevel;
   durationSeconds?: number;

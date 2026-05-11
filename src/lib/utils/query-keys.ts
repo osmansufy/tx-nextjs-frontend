@@ -24,4 +24,7 @@ export const queryKeys = {
   user: {
     me: ["user", "me"] as const,
   },
+  blog: {
+    posts: (perPage?: number) => ["blog", "posts", perPage] as const,
+  },
 } as const;

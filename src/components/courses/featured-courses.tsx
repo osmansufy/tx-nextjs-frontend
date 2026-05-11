@@ -9,7 +9,7 @@ interface FeaturedCoursesProps {
   limit?: number;
 }
 
-export function FeaturedCourses({ limit = 6 }: FeaturedCoursesProps) {
+export function FeaturedCourses({ limit = 8 }: FeaturedCoursesProps) {
   const { data, isLoading, isError } = useCourses({
     perPage: limit,
     orderBy: "popularity",
@@ -20,7 +20,7 @@ export function FeaturedCourses({ limit = 6 }: FeaturedCoursesProps) {
     return (
       <EmptyState
         icon={<GraduationCap className="h-10 w-10" />}
-        title="Couldn't load featured courses"
+        title="Couldn't load courses"
         description="Verify your WP API URL and that the LMS plugin is active."
       />
     );
@@ -28,7 +28,7 @@ export function FeaturedCourses({ limit = 6 }: FeaturedCoursesProps) {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: limit }).map((_, i) => (
           <CourseCardSkeleton key={i} />
         ))}
@@ -39,7 +39,7 @@ export function FeaturedCourses({ limit = 6 }: FeaturedCoursesProps) {
   if (!data?.items.length) return null;
 
   return (
-    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
       {data.items.map((c) => (
         <CourseCard key={c.id} course={c} />
       ))}

@@ -23,7 +23,7 @@ Copy `.env.example` to `.env.local`. Required:
 - `NEXT_PUBLIC_SITE_URL` — this app's public URL
 
 Optional:
-- `NEXT_PUBLIC_LMS_NAMESPACE` — defaults to `lms/v1` in code **but must be `lms-backend/v1`** for the real backend (see P0 gap below)
+- `NEXT_PUBLIC_LMS_NAMESPACE` — defaults to `lms-backend/v1`; only set this to override
 
 ## Key conventions
 
@@ -76,30 +76,9 @@ The Axios request interceptor reads the token from `localStorage` directly and s
 
 `src/app/providers.tsx` mounts a per-request `QueryClient` + `ThemeProvider` + `Toaster`. TanStack Query DevTools are included (development only).
 
-## Critical gap: current code vs. real backend
+## BFF pattern
 
-The scaffold was wired to a different LMS plugin. **These mismatches will produce 404s against the real backend** (`lms-backend-rest-api`):
-
-| What the code does | What the real backend expects |
-|---|---|
-| Namespace `lms/v1` (env default) | `lms-backend/v1` |
-| Auth via `POST /jwt-auth/v1/token` | `POST /lms-backend/v1/auth/login` → returns `{ access_token, refresh_token, expires_in, user }` |
-| `POST /wp/v2/users/register` | `POST /lms-backend/v1/auth/register` |
-| `GET /wp/v2/users/me` | `GET /lms-backend/v1/users/me` |
-| Lessons at `/lms/v1/lessons/{id}` | Units at `/lms-backend/v1/units/{id}` |
-| Flat `data` array assumed | Envelope `{ success, data: { items, total, … } }` on all responses |
-
-**P0 work needed before any feature work:**
-1. Fix `src/lib/env.ts` default namespace to `lms-backend/v1`
-2. Rebuild `src/lib/api/endpoints.ts` against real auth + unit routes (see `PROJECT_PLAN.md §4.2`)
-3. Add response-unwrap interceptor to `src/lib/api/client.ts` for `{ success, data }` envelope
-4. Rename `lessons` → `units` across services/hooks/components/routes
-
-## Planned BFF pattern (not yet implemented)
-
-`PROJECT_PLAN.md` specifies migrating to a BFF proxy where Next.js API routes (`src/app/api/`) set **httpOnly cookies** for tokens, eliminating client-side token exposure. Until that lands, tokens live in `localStorage` + non-httpOnly cookie. Do not remove the cookie-mirroring in `auth.store.ts` — `middleware.ts` depends on it.
-
-When implementing BFF routes: `proxyToWP()` utility reads the httpOnly `access_token` cookie, calls WP with `Authorization: Bearer`, auto-refreshes on 401, and unwraps the `{ success, data }` envelope before returning to the client. See `PROJECT_PLAN.md §4.4` for the full token flow and cookie naming contract.
+All authenticated calls go through Next.js API routes (`src/app/api/`) which set `access_token` + `refresh_token` as `HttpOnly` cookies. `proxyToWP()` (`src/lib/api/bff.ts`) reads the httpOnly cookie, appends `Authorization: Bearer`, auto-refreshes on 401, and unwraps the `{ success, data }` envelope before returning to the client. Tokens never reach browser JS.
 
 ## API reference
 

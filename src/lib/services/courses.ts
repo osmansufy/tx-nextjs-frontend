@@ -25,6 +25,9 @@ interface RawCourse {
   featured_image?: string;
   featured_media_url?: string;
   price?: number | string;
+  original_price?: number | string;
+  regular_price?: number | string;
+  compare_at_price?: number | string;
   is_free?: boolean;
   free?: boolean;
   level?: string;
@@ -82,6 +85,10 @@ function normalizeUnitSummaryFromCurriculum(raw: Record<string, unknown>): UnitS
 export function normalizeCourse(raw: RawCourse): Course {
   const price =
     typeof raw.price === "string" ? Number(raw.price) || undefined : (raw.price as number | undefined);
+  const toNum = (v: number | string | undefined) =>
+    typeof v === "string" ? Number(v) || undefined : v;
+  const originalPrice =
+    toNum(raw.original_price) ?? toNum(raw.regular_price) ?? toNum(raw.compare_at_price);
   return {
     id: raw.id,
     slug: raw.slug ?? String(raw.id),
@@ -91,6 +98,7 @@ export function normalizeCourse(raw: RawCourse): Course {
     featuredImage:
       raw.featured_image ?? raw.featured_media_url ?? raw.image ?? raw.thumbnail ?? undefined,
     price,
+    originalPrice: originalPrice !== price ? originalPrice : undefined,
     isFree: raw.is_free ?? raw.free ?? (price !== undefined ? price === 0 : undefined),
     level: (raw.level as Course["level"]) ?? undefined,
     durationSeconds: raw.duration_seconds ?? raw.duration ?? raw.total_duration,
@@ -182,7 +190,14 @@ export const coursesService = {
   },
 
   async categories(): Promise<CourseCategory[]> {
-    const { data } = await api.get<CourseCategory[]>(endpoints.taxonomy.courseCategories);
-    return data;
+    const res = await api.get<{ items: CourseCategory[] } | CourseCategory[]>(
+      endpoints.taxonomy.courseCategories,
+    );
+    const body = res.data;
+    // After unwrapLmsEnvelope the body is { items, total, ... } from paginated_success.
+    if (body && !Array.isArray(body) && "items" in body) {
+      return (body as { items: CourseCategory[] }).items ?? [];
+    }
+    return (body as CourseCategory[]) ?? [];
   },
 };

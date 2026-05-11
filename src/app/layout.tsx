@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { Montserrat, Open_Sans } from "next/font/google";
 import { Providers } from "./providers";
 import { SiteSettingsProvider } from "@/components/providers/site-settings-provider";
 import { fetchSettings } from "@/lib/services/settings.server";
@@ -15,6 +16,18 @@ const geistMono = localFont({
   src: "./fonts/GeistMonoVF.woff",
   variable: "--font-geist-mono",
   weight: "100 900",
+});
+const suse = Montserrat({
+  subsets: ["latin"],
+  variable: "--font-suse",
+  weight: ["400", "600", "700", "800"],
+  display: "swap",
+});
+const openSans = Open_Sans({
+  subsets: ["latin"],
+  variable: "--font-open-sans",
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -55,7 +68,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${suse.variable} ${openSans.variable} font-sans antialiased`}
         style={cssVars as React.CSSProperties}
       >
         <Providers>

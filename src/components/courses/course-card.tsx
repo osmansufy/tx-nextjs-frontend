@@ -1,68 +1,88 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Clock, GraduationCap, Star, Users } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatDuration, pluralize, stripHtml, truncate } from "@/lib/utils/format";
+import { BookOpen, Bookmark, Clock, Star, Users } from "lucide-react";
+import { cn } from "@/lib/utils/cn";
+import { formatDuration, pluralize } from "@/lib/utils/format";
 import type { Course } from "@/types/course";
 
 interface CourseCardProps {
   course: Course;
+  className?: string;
 }
 
-export function CourseCard({ course }: CourseCardProps) {
-  const excerpt = truncate(stripHtml(course.excerpt), 120);
+export function CourseCard({ course, className }: CourseCardProps) {
+  const badges = course.categories?.slice(0, 3) ?? [];
+
   return (
-    <Card className="group flex h-full flex-col overflow-hidden transition-shadow hover:shadow-md">
-      <Link href={`/courses/${course.slug}`} className="block">
-        <div className="relative aspect-video w-full overflow-hidden bg-muted">
+    <div
+      className={cn(
+        "flex flex-col overflow-hidden rounded-lg border border-[#ebedf1] bg-white shadow-sm transition-shadow hover:shadow-md",
+        className,
+      )}
+    >
+      <Link href={`/courses/${course.slug}`} className="block shrink-0">
+        <div className="relative aspect-[19/10] w-full overflow-hidden bg-neutral-20">
           {course.featuredImage ? (
             <Image
               src={course.featuredImage}
               alt={course.title}
               fill
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+              className="object-cover transition-transform duration-300 hover:scale-105"
             />
           ) : (
-            <div className="flex h-full items-center justify-center text-muted-foreground">
-              <GraduationCap className="h-10 w-10" />
+            <div className="flex h-full items-center justify-center bg-neutral-20 text-neutral-100">
+              <BookOpen className="h-10 w-10" />
             </div>
           )}
-          {course.isFree ? (
-            <Badge variant="success" className="absolute left-3 top-3">
-              Free
-            </Badge>
-          ) : null}
         </div>
       </Link>
 
-      <CardHeader className="space-y-2 pb-2">
-        {course.categories && course.categories[0] ? (
-          <Badge variant="secondary" className="w-fit">
-            {course.categories[0].name}
-          </Badge>
-        ) : null}
-        <CardTitle className="line-clamp-2 text-base">
-          <Link
-            href={`/courses/${course.slug}`}
-            className="transition-colors hover:text-primary"
+      <div className="flex flex-1 flex-col gap-4 p-4">
+        {/* Rating + bookmark */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-neutral-400">
+            <span>{course.rating?.toFixed(1) ?? "4.5"}</span>
+            <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+            {course.ratingCount ? (
+              <span className="text-neutral-400">({course.ratingCount.toLocaleString()} Reviews)</span>
+            ) : null}
+          </div>
+          <button
+            aria-label="Bookmark course"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ebedf1] text-neutral-400 transition-colors hover:bg-neutral-30 hover:text-neutral-600"
           >
-            {course.title}
-          </Link>
-        </CardTitle>
-        {excerpt ? (
-          <p className="line-clamp-2 text-sm text-muted-foreground">{excerpt}</p>
-        ) : null}
-      </CardHeader>
+            <Bookmark className="h-4 w-4" />
+          </button>
+        </div>
 
-      <CardContent className="flex-1 pb-4">
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        {/* Title */}
+        <Link href={`/courses/${course.slug}`}>
+          <h3 className="line-clamp-2 font-suse font-bold leading-snug text-neutral-900 transition-colors hover:text-secondary-500">
+            {course.title}
+          </h3>
+        </Link>
+
+        {/* Accreditation badges */}
+        {badges.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {badges.map((cat) => (
+              <span
+                key={cat.id}
+                className="inline-flex items-center gap-1 rounded-full bg-secondary-50 px-2 py-0.5 text-xs text-secondary-900"
+              >
+                {cat.name}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Meta row */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#667992]">
           {(course.unitsCount ?? course.lessonsCount) ? (
             <span className="inline-flex items-center gap-1">
-              <GraduationCap className="h-3 w-3" />
-              {course.unitsCount ?? course.lessonsCount}{" "}
-              {pluralize(course.unitsCount ?? course.lessonsCount ?? 0, "unit")}
+              <BookOpen className="h-3 w-3" />
+              {pluralize(course.unitsCount ?? course.lessonsCount ?? 0, "Module")}
             </span>
           ) : null}
           {course.durationSeconds ? (
@@ -74,43 +94,73 @@ export function CourseCard({ course }: CourseCardProps) {
           {course.studentsCount ? (
             <span className="inline-flex items-center gap-1">
               <Users className="h-3 w-3" />
-              {course.studentsCount.toLocaleString()}
-            </span>
-          ) : null}
-          {course.rating ? (
-            <span className="inline-flex items-center gap-1">
-              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-              {course.rating.toFixed(1)}
+              {course.studentsCount >= 1000
+                ? `${(course.studentsCount / 1000).toFixed(0)}k+`
+                : course.studentsCount}{" "}
+              Students
             </span>
           ) : null}
         </div>
-      </CardContent>
 
-      <CardFooter className="flex items-center justify-between border-t pt-4 text-sm">
-        <span className="text-muted-foreground">{course.instructor?.name ?? "Instructor"}</span>
-        <span className="font-semibold">
-          {course.isFree ? "Free" : course.price ? `$${course.price}` : ""}
-        </span>
-      </CardFooter>
-    </Card>
+        <div className="mt-auto border-t border-[#ebedf1] pt-4" />
+
+        {/* Price + CTA */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-baseline gap-2">
+            {course.isFree ? (
+              <span className="font-open-sans text-xl font-bold text-neutral-900">Free</span>
+            ) : course.price ? (
+              <>
+                <span className="font-open-sans font-bold text-neutral-900">
+                  <span className="text-xl">£{course.price}</span>
+                  <span className="text-xs font-normal"> +VAT</span>
+                </span>
+                {course.originalPrice && course.originalPrice > course.price ? (
+                  <span className="font-open-sans text-sm text-[#dc3545] line-through">
+                    £{course.originalPrice}
+                  </span>
+                ) : null}
+              </>
+            ) : null}
+          </div>
+          <Link
+            href={`/courses/${course.slug}`}
+            className="inline-flex items-center gap-1 rounded-full border border-secondary-500 px-4 py-1.5 text-sm text-secondary-500 transition-colors hover:bg-secondary-50"
+          >
+            View Course →
+          </Link>
+        </div>
+      </div>
+    </div>
   );
 }
 
 export function CourseCardSkeleton() {
   return (
-    <Card className="flex h-full flex-col overflow-hidden">
-      <div className="aspect-video w-full animate-pulse bg-muted" />
-      <CardHeader className="space-y-2">
-        <div className="h-3 w-16 animate-pulse rounded bg-muted" />
-        <div className="h-5 w-full animate-pulse rounded bg-muted" />
-        <div className="h-3 w-3/4 animate-pulse rounded bg-muted" />
-      </CardHeader>
-      <CardContent>
-        <div className="h-3 w-1/2 animate-pulse rounded bg-muted" />
-      </CardContent>
-      <CardFooter className="border-t pt-4">
-        <div className="h-3 w-1/3 animate-pulse rounded bg-muted" />
-      </CardFooter>
-    </Card>
+    <div className="flex flex-col overflow-hidden rounded-lg border border-[#ebedf1] bg-white">
+      <div className="aspect-[19/10] w-full animate-pulse bg-neutral-20" />
+      <div className="flex flex-col gap-3 p-4">
+        <div className="flex items-center justify-between">
+          <div className="h-4 w-24 animate-pulse rounded bg-neutral-20" />
+          <div className="h-8 w-8 animate-pulse rounded-full bg-neutral-20" />
+        </div>
+        <div className="h-5 w-full animate-pulse rounded bg-neutral-20" />
+        <div className="h-4 w-3/4 animate-pulse rounded bg-neutral-20" />
+        <div className="flex gap-2">
+          <div className="h-5 w-12 animate-pulse rounded-full bg-neutral-20" />
+          <div className="h-5 w-14 animate-pulse rounded-full bg-neutral-20" />
+        </div>
+        <div className="mt-2 flex gap-4">
+          <div className="h-3 w-20 animate-pulse rounded bg-neutral-20" />
+          <div className="h-3 w-16 animate-pulse rounded bg-neutral-20" />
+        </div>
+        <div className="border-t border-[#ebedf1] pt-3">
+          <div className="flex items-center justify-between">
+            <div className="h-6 w-20 animate-pulse rounded bg-neutral-20" />
+            <div className="h-8 w-28 animate-pulse rounded-full bg-neutral-20" />
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

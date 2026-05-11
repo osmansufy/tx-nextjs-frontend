@@ -7,7 +7,7 @@ export interface CourseCategory {
   description?: string;
   count?: number;
   parent?: number;
-  image?: string | null;
+  featuredImage?: string | null;
 }
 
 export interface CourseInstructor {

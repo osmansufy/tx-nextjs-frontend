@@ -1,48 +1,22 @@
-"use client";
-
-import { useCourses } from "@/lib/hooks/useCourses";
-import { CourseCard, CourseCardSkeleton } from "@/components/courses/course-card";
-import { EmptyState } from "@/components/ui/empty-state";
-import { GraduationCap } from "lucide-react";
+import { serverApi } from "@/lib/api/server";
+import { normalizeCourse } from "@/lib/services/courses";
+import { CourseCard } from "@/components/courses/course-card";
 
 interface FeaturedCoursesProps {
   limit?: number;
 }
 
-export function FeaturedCourses({ limit = 8 }: FeaturedCoursesProps) {
-  const { data, isLoading, isError } = useCourses({
-    perPage: limit,
-    orderBy: "popularity",
-    order: "desc",
-  });
+export async function FeaturedCourses({ limit = 8 }: FeaturedCoursesProps) {
+  const data = await serverApi.courses.featured(limit);
 
-  if (isError) {
-    return (
-      <EmptyState
-        icon={<GraduationCap className="h-10 w-10" />}
-        title="Couldn't load courses"
-        description="Verify your WP API URL and that the LMS plugin is active."
-      />
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: limit }).map((_, i) => (
-          <CourseCardSkeleton key={i} />
-        ))}
-      </div>
-    );
-  }
-
-  if (!data?.items.length) return null;
+  if (!data?.items?.length) return null;
 
   return (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-      {data.items.map((c) => (
-        <CourseCard key={c.id} course={c} />
-      ))}
+      {data.items.map((raw) => {
+        const course = normalizeCourse(raw as Parameters<typeof normalizeCourse>[0]);
+        return <CourseCard key={course.id} course={course} />;
+      })}
     </div>
   );
 }

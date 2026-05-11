@@ -9,6 +9,7 @@ import { useSiteSettings } from "@/components/providers/site-settings-provider";
 import { useAuth, useLogout } from "@/lib/hooks/useAuth";
 import { cn } from "@/lib/utils/cn";
 import { MegaMenu } from "./mega-menu";
+import type { CourseCategory } from "@/types/course";
 
 const resourcesLinks = [
   { href: "/blog", label: "Blog" },
@@ -92,7 +93,7 @@ function CourseSearch() {
   );
 }
 
-export function SiteHeader() {
+export function SiteHeader({ categories = [] }: { categories?: CourseCategory[] }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [megaMenuOpen, setMegaMenuOpen] = useState(false);
   const pathname = usePathname();
@@ -100,6 +101,11 @@ export function SiteHeader() {
   const { isAuthenticated, user, hasHydrated } = useAuth();
   const logout = useLogout();
   const closeMegaMenu = useCallback(() => setMegaMenuOpen(false), []);
+
+  useEffect(() => {
+    setMegaMenuOpen(false);
+    setMobileOpen(false);
+  }, [pathname]);
 
   const logoUrl = settings.logo_url ?? settings.logo_dark_url;
 
@@ -250,7 +256,7 @@ export function SiteHeader() {
       </div>
 
       {/* Mega menu */}
-      {megaMenuOpen && <MegaMenu onClose={closeMegaMenu} />}
+      {megaMenuOpen && <MegaMenu onClose={closeMegaMenu} categories={categories} />}
 
       {/* Mobile nav */}
       {mobileOpen && (

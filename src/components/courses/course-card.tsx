@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { BookOpen, Bookmark, Clock, Star, Users } from "lucide-react";
+import { BookOpen, Bookmark, Check, Clock, Star, Users } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { formatDuration, pluralize } from "@/lib/utils/format";
 import type { Course } from "@/types/course";
@@ -69,8 +69,9 @@ export function CourseCard({ course, className }: CourseCardProps) {
             {badges.map((cat) => (
               <span
                 key={cat.id}
-                className="inline-flex items-center gap-1 rounded-full bg-secondary-50 px-2 py-0.5 text-xs text-secondary-900"
+                className="inline-flex items-center gap-1 rounded-full bg-secondary-50 px-2 py-0.5 font-open-sans text-xs text-secondary-900"
               >
+                <Check className="h-2.5 w-2.5 shrink-0" />
                 {cat.name}
               </span>
             ))}

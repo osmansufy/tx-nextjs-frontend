@@ -1,10 +1,22 @@
+import { cache } from "react";
+import { coursesService } from "@/lib/services/courses";
 import { SiteHeader } from "./header";
 import { SiteFooter } from "./footer";
+import type { CourseCategory } from "@/types/course";
 
-export function SiteShell({ children }: { children: React.ReactNode }) {
+const getNavCategories = cache(async (): Promise<CourseCategory[]> => {
+  try {
+    return await coursesService.categories();
+  } catch {
+    return [];
+  }
+});
+
+export async function SiteShell({ children }: { children: React.ReactNode }) {
+  const categories = await getNavCategories();
   return (
     <div className="flex min-h-svh flex-col">
-      <SiteHeader />
+      <SiteHeader categories={categories} />
       <main className="flex-1">{children}</main>
       <SiteFooter />
     </div>

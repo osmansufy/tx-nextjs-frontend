@@ -15,7 +15,6 @@ import {
   MoveRight,
   CheckCircle,
 } from "lucide-react";
-import { useCourseCategories } from "@/lib/hooks/useCourses";
 import type { CourseCategory } from "@/types/course";
 
 const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -41,18 +40,6 @@ function getCategoryIcon(slug: string): React.ComponentType<{ className?: string
   return key ? CATEGORY_ICONS[key] : GraduationCap;
 }
 
-const MOCK_CATEGORIES: CourseCategory[] = [
-  { id: 1, slug: "food-hygiene", name: "Food Hygiene" },
-  { id: 2, slug: "business-essentials", name: "Business Essentials" },
-  { id: 3, slug: "mental-health", name: "Mental Health" },
-  { id: 4, slug: "haccp", name: "HACCP" },
-  { id: 5, slug: "health-and-safety", name: "Health and Safety" },
-  { id: 6, slug: "safeguarding", name: "Safeguarding" },
-  { id: 7, slug: "fire-safety", name: "Fire Safety" },
-  { id: 8, slug: "education", name: "Teaching" },
-  { id: 9, slug: "health-and-social-care", name: "Health and Social Care" },
-];
-
 const BUSINESS_FEATURES = [
   "All Premium features included",
   "Central training dashboard",
@@ -63,22 +50,16 @@ const BUSINESS_FEATURES = [
 
 interface MegaMenuProps {
   onClose: () => void;
+  categories: CourseCategory[];
 }
 
-function CategoryCard({
-  category,
-  onClose,
-}: {
-  category: CourseCategory;
-  onClose: () => void;
-}) {
+function CategoryCard({ category }: { category: CourseCategory }) {
   const Icon = getCategoryIcon(category.slug);
   const isHighlighted = category.slug === "business-essentials";
 
   return (
     <Link
       href={`/courses?category=${category.slug}`}
-      onClick={onClose}
       className={[
         "group flex items-center gap-4 rounded-lg border p-4 transition-all",
         isHighlighted
@@ -117,14 +98,12 @@ function CategoryCard({
   );
 }
 
-export function MegaMenu({ onClose }: MegaMenuProps) {
-  const { data: apiCategories } = useCourseCategories();
-
-  const categories = (apiCategories && apiCategories.length > 0 ? apiCategories : MOCK_CATEGORIES).slice(0, 9);
+export function MegaMenu({ onClose, categories }: MegaMenuProps) {
+  const displayed = categories.slice(0, 9);
 
   const rows: CourseCategory[][] = [];
-  for (let i = 0; i < categories.length; i += 3) {
-    rows.push(categories.slice(i, i + 3));
+  for (let i = 0; i < displayed.length; i += 3) {
+    rows.push(displayed.slice(i, i + 3));
   }
 
   useEffect(() => {
@@ -137,7 +116,7 @@ export function MegaMenu({ onClose }: MegaMenuProps) {
 
   return (
     <div
-      className="absolute left-0 right-0 top-full z-50 bg-neutral-10 shadow-[0px_16px_48px_rgba(0,0,0,0.18)]"
+      className="absolute left-0 right-0 top-full z-50 bg-neutral-10 shadow-[0_16px_24px_rgba(0,0,0,0.17)]"
       role="dialog"
       aria-label="Our courses menu"
     >
@@ -169,7 +148,6 @@ export function MegaMenu({ onClose }: MegaMenuProps) {
           </div>
           <Link
             href="/training-teams"
-            onClick={onClose}
             className="mt-6 flex h-10 w-full items-center justify-center rounded-full border border-primary-500 bg-gradient-to-r from-primary-500 to-primary-200 px-4 font-open-sans text-base font-semibold text-neutral-900 shadow-sm transition-opacity hover:opacity-90"
           >
             Request for a Quote
@@ -178,16 +156,17 @@ export function MegaMenu({ onClose }: MegaMenuProps) {
 
         {/* Right: Categories grid + banner */}
         <div className="flex flex-1 flex-col gap-8">
-          {/* 3×N category grid */}
-          <div className="flex flex-col gap-6">
-            {rows.map((row, ri) => (
-              <div key={ri} className="grid grid-cols-3 gap-6">
-                {row.map((cat) => (
-                  <CategoryCard key={cat.id} category={cat} onClose={onClose} />
-                ))}
-              </div>
-            ))}
-          </div>
+          {rows.length > 0 && (
+            <div className="flex flex-col gap-6">
+              {rows.map((row, ri) => (
+                <div key={ri} className="grid grid-cols-3 gap-6">
+                  {row.map((cat) => (
+                    <CategoryCard key={cat.id} category={cat} />
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Explore all banner */}
           <div className="flex items-center justify-between rounded-2xl border border-neutral-40 bg-neutral-20 p-6">
@@ -202,7 +181,6 @@ export function MegaMenu({ onClose }: MegaMenuProps) {
             </div>
             <Link
               href="/courses"
-              onClick={onClose}
               className="ml-6 flex shrink-0 items-center justify-center rounded-full bg-secondary-500 px-6 py-4 font-open-sans text-base font-semibold text-white shadow-sm transition-colors hover:bg-secondary-600"
             >
               See All Courses
@@ -211,12 +189,8 @@ export function MegaMenu({ onClose }: MegaMenuProps) {
         </div>
       </div>
 
-      {/* Backdrop overlay — closes menu on outside click */}
-      <div
-        className="fixed inset-0 -z-10"
-        aria-hidden="true"
-        onClick={onClose}
-      />
+      {/* Backdrop — closes menu on outside click */}
+      <div className="fixed inset-0 -z-10" aria-hidden="true" onClick={onClose} />
     </div>
   );
 }

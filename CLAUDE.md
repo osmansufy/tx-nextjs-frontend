@@ -4,17 +4,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
+**Package manager: pnpm** — do not use npm or yarn.
+
 ```bash
-npm run dev          # dev server (localhost:3000)
-npm run build        # production build
-npm run lint         # ESLint check
-npm run lint:fix     # ESLint auto-fix
-npm run format       # Prettier write
-npm run format:check # Prettier check
-npm run typecheck    # tsc --noEmit (no emit, type-check only)
+pnpm dev            # dev server (localhost:3000)
+pnpm build          # production build
+pnpm typecheck      # tsc --noEmit
+pnpm lint           # ESLint
+pnpm lint:fix       # ESLint auto-fix
+pnpm format         # Prettier write
+pnpm format:check   # Prettier check
+pnpm test           # Vitest unit tests (run once)
+pnpm test:watch     # Vitest watch mode
+pnpm test:coverage  # Vitest with coverage
+pnpm test:e2e       # Playwright E2E (requires dev server running)
 ```
 
-No tests are configured yet. Pre-commit hook runs lint-staged (lint + format on staged files).
+Pre-commit hook (Husky + lint-staged) runs lint + format on staged files.
 
 ## Environment
 
@@ -22,67 +28,106 @@ Copy `.env.example` to `.env.local`. Required:
 - `NEXT_PUBLIC_WP_API_URL` — WordPress base URL, no trailing slash, no `/wp-json`
 - `NEXT_PUBLIC_SITE_URL` — this app's public URL
 
-Optional:
-- `NEXT_PUBLIC_LMS_NAMESPACE` — defaults to `lms-backend/v1`; only set this to override
-
-## Key conventions
-
-- **Path alias:** `@/` maps to `src/`. Use it for all internal imports.
-- **Class merging:** `cn(...classes)` from `src/lib/utils/cn.ts` — wraps `clsx` + `tailwind-merge`. Use for all conditional Tailwind class composition.
-- **`next/image` hosts:** `next.config.mjs` auto-adds `NEXT_PUBLIC_WP_API_URL`'s hostname to `remotePatterns`, plus `secure.gravatar.com` and `*.wp.com`. Any other image host (CDN, etc.) must be added there manually.
+Optional overrides (all defined in `src/lib/env.ts`):
+- `NEXT_PUBLIC_LMS_NAMESPACE` — defaults to `lms-backend/v1`
+- `WP_API_URL` — server-only override for `NEXT_PUBLIC_WP_API_URL` (skips browser-public value in BFF)
+- `NEXT_PUBLIC_FEATURE_*` — boolean feature flags; default `true` except `FEATURE_BADGES` (false)
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_SENTRY_DSN`, `WP_REVALIDATE_SECRET`
 
 ## Architecture
 
 ### Route groups
 
-| Group | Path | Notes |
+All pages live under `src/app/[locale]/`. i18n uses next-intl with `localePrefix: "as-needed"` — URLs are clean (no `/en/` prefix) while the structure supports future locales.
+
+| Group | Paths | Notes |
 |---|---|---|
-| `(marketing)` | `/` | Public landing, SSR |
-| `(auth)` | `/login`, `/register`, `/forgot-password` | Redirects to `/dashboard` if already authed |
-| `(student)` | `/courses`, `/dashboard`, `/profile` | Protected, uses `SiteShell` layout |
-| `(learn)` | `/learn/[courseId]/[lessonId]` | Full-screen player, no shell |
+| `(marketing)` | `/` | Public, SSR |
+| `(auth)` | `/login`, `/register`, `/forgot-password` | Bounces authenticated users to `/dashboard` |
+| `(student)` | `/dashboard`, `/courses`, `/profile`, etc. | Protected, uses `SiteShell` layout |
+| `(learn)` | `/learn/[courseId]/[unitId]` | Full-screen unit player |
 
-Middleware (`src/middleware.ts`) guards `/dashboard`, `/learn`, `/profile` by checking the `lms_token` cookie. Authenticated users hitting `/login` or `/register` are bounced to `/dashboard`.
+Middleware (`src/middleware.ts`) reads the non-httpOnly `user_logged_in=1` cookie as the auth signal. It runs next-intl for all non-protected, non-auth routes.
 
-### Data flow
+### BFF security model
+
+Tokens never reach browser JS. Flow:
 
 ```
-UI (page/component)
+Browser
+  ↓ credentials:include
+/api/* BFF routes (src/app/api/)
+  ↓ reads httpOnly access_token cookie
+proxyToWP()  (src/lib/api/bff.ts)
+  ↓ Authorization: Bearer — auto-refreshes on 401
+WordPress REST API  /wp-json/lms-backend/v1/*
+```
+
+- **Login flow**: browser → `/api/auth/login` → WP → sets `access_token` + `refresh_token` as httpOnly cookies → returns only `{ user }` to browser.
+- **Client mutations**: use `bffJson()` from `src/lib/api/bff-client.ts` (sets `credentials: "include"`).
+- **Server Components**: use `serverApi` / `serverFetch` from `src/lib/api/server.ts` (native fetch, Next.js cache tags).
+- **Zustand `useAuthStore`**: stores only `{ user }` (display data) in localStorage under `lms-auth`. No tokens.
+
+### Data flow (client-side reads)
+
+```
+UI component
   → hooks/ (TanStack Query useQuery/useMutation)
-    → services/ (typed async functions)
-      → src/lib/api/client.ts (Axios singleton, injects Bearer token from localStorage)
-        → WordPress REST API
+    → services/ (src/lib/services/)
+      → api/client.ts (Axios singleton — direct to WP for public reads)
 ```
 
-**All endpoint URLs live in one file:** `src/lib/api/endpoints.ts`. Swap routes there, not in services.
+Public reads (course list, blog, etc.) go directly from the Axios client to WordPress — no BFF proxy needed. Only authenticated mutations and sensitive reads go through `/api/*` BFF routes.
 
-**Services** (`src/lib/services/`) are the only translation layer between WP-shaped data and domain types in `src/types/`. Each service owns its own `normalize*` functions.
+### Endpoint namespaces
 
-**Parsers** (`src/lib/api/parsers.ts`) provide two utilities:
-- `paginate()` — tolerates both `X-WP-Total`/`X-WP-TotalPages` headers (native WP endpoints) and envelope `{ items, total, total_pages }` (custom LMS endpoints). Use for all list responses.
-- `decodeEntities()` — WP returns HTML entities in rendered title/excerpt fields (`&amp;`, `&#8217;`, etc.). Call this on any string field coming from a WP rendered object before displaying.
+`src/lib/api/endpoints.ts` is the single source for all URL strings:
+- `lms` → `/lms-backend/v1` (custom LMS plugin)
+- `wp` → `/wp/v2` (native WordPress REST)
+- `swca` → `/swca/v1` (legacy certificate verification only)
 
-**Query keys** are centralized in `src/lib/utils/query-keys.ts`. Always use these constants — do not inline strings in `useQuery`/`useMutation` calls.
+### Services and normalization
 
-**Error handling** — all Axios errors are converted to `ApiError` (from `src/lib/api/error.ts`) by the response interceptor. Catch as `ApiError` in components; check `.code` for WP error codes (e.g. `lms_auth_failed`, `lms_already_enrolled`) and `.status` for HTTP status.
+Services in `src/lib/services/` are the only layer that translates WP-shaped data to domain types (`src/types/`). The WP API has inconsistent field names across versions (e.g. `total_students` vs `students_count`, `average_rating` vs `rating`, `duration_seconds` vs `duration`). Services normalize these; **do not add field-aliasing logic in components**.
 
-### Auth state
+`decodeEntities()` from `src/lib/api/parsers.ts` must be called on any string that comes from a WP `rendered` object (title/excerpt fields). `renderedOrString()` in `courses.ts` shows the pattern.
 
-`useAuthStore` (Zustand + `persist`) stores `{ token, user }` in `localStorage` under key `lms-auth`. On `setSession`, it also writes a 7-day `lms_token` cookie (non-httpOnly, `SameSite=Lax`) so `middleware.ts` can read it server-side.
+`paginate()` from the same file handles both WP header pagination (`X-WP-Total`) and envelope pagination (`{ items, total, total_pages }`).
 
-The Axios request interceptor reads the token from `localStorage` directly and sets `Authorization: Bearer`. The response interceptor clears auth state and redirects to `/login` on `401`/`403`.
+### Query keys
 
-### Providers
+Always use constants from `src/lib/utils/query-keys.ts`. Never inline strings in `useQuery`/`useMutation` calls.
 
-`src/app/providers.tsx` mounts a per-request `QueryClient` + `ThemeProvider` + `Toaster`. TanStack Query DevTools are included (development only).
+### Site settings and feature flags
 
-## BFF pattern
+Site name, logo, feature flags are fetched server-side from `GET /lms-backend/v1/settings` and injected via `SiteSettingsProvider`. In client components use `useSiteSettings()` / `useFeatureFlag()`. Env vars (`NEXT_PUBLIC_FEATURE_*`) take precedence over the settings endpoint.
 
-All authenticated calls go through Next.js API routes (`src/app/api/`) which set `access_token` + `refresh_token` as `HttpOnly` cookies. `proxyToWP()` (`src/lib/api/bff.ts`) reads the httpOnly cookie, appends `Authorization: Bearer`, auto-refreshes on 401, and unwraps the `{ success, data }` envelope before returning to the client. Tokens never reach browser JS.
+### Error handling
+
+All Axios errors are converted to `ApiError` (`src/lib/api/error.ts`) by the response interceptor. Catch as `ApiError`; check `.code` for WP error codes (e.g. `lms_auth_failed`) and `.status` for HTTP status.
+
+## Key files
+
+| File | Purpose |
+|---|---|
+| `src/lib/api/endpoints.ts` | All WP endpoint URLs |
+| `src/lib/api/bff.ts` | `proxyToWP()` — server-side proxy with token refresh |
+| `src/lib/api/bff-client.ts` | `bffJson()` — client helper for BFF route calls |
+| `src/lib/api/client.ts` | Axios singleton (direct-to-WP, public reads) |
+| `src/lib/api/parsers.ts` | `paginate()` + `decodeEntities()` |
+| `src/lib/api/server.ts` | Server Component fetch utilities |
+| `src/lib/env.ts` | All env var definitions and `getServerWpJsonBase()` |
+| `src/lib/utils/query-keys.ts` | Centralized TanStack Query keys |
+| `src/lib/stores/auth.store.ts` | Zustand auth store (user display data only) |
+| `src/middleware.ts` | Route guards + next-intl integration |
+
+## Conventions
+
+- **Path alias**: `@/` → `src/`
+- **Class merging**: `cn(...)` from `src/lib/utils/cn.ts` for all Tailwind composition
+- **`next/image` hosts**: `next.config.mjs` auto-adds `NEXT_PUBLIC_WP_API_URL`'s hostname; add other CDN hosts there manually
+- **Sentry**: configured in `sentry.client.config.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`
 
 ## API reference
 
-`API_REFERENCE.md` is the authoritative, verified contract for the `lms-backend/v1` backend plugin. Use it when wiring new endpoints — `PROJECT_PLAN.md §4.2` has the full endpoint map.
-
-Backend plugin repo: `https://github.com/Codezen-technology/wp-lms-backend-rest-api`
-Live reference site: `https://trainingexcellence.org.uk`
+`API_REFERENCE.md` is the authoritative contract for the `lms-backend/v1` backend plugin. Consult it when wiring new endpoints.

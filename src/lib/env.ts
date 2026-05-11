@@ -1,23 +1,11 @@
-const requireEnv = (key: string, fallback?: string): string => {
-  const v = process.env[key] ?? fallback;
-  if (!v) {
-    if (typeof window === "undefined") {
-      console.warn(`[env] ${key} is not set. Falling back to empty string.`);
-    }
-    return "";
-  }
-  return v;
-};
-
-function boolEnv(key: string, fallback = true): boolean {
-  const v = process.env[key];
+function boolFlag(v: string | undefined, fallback = true): boolean {
   if (v === undefined) return fallback;
   return v !== "false" && v !== "0";
 }
 
 export const env = {
-  WP_API_URL: requireEnv("NEXT_PUBLIC_WP_API_URL", ""),
-  SITE_URL: requireEnv("NEXT_PUBLIC_SITE_URL", "http://localhost:3000"),
+  WP_API_URL: process.env.NEXT_PUBLIC_WP_API_URL ?? "",
+  SITE_URL: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
   LMS_NAMESPACE: process.env.NEXT_PUBLIC_LMS_NAMESPACE ?? "lms-backend/v1",
   CDN_URL: process.env.NEXT_PUBLIC_CDN_URL ?? "",
 
@@ -43,12 +31,12 @@ export const env = {
   LOCALE: process.env.NEXT_PUBLIC_LOCALE ?? "en-GB",
 
   // Feature flag env overrides (fallback to /settings endpoint; true by default)
-  FEATURE_MEMBERSHIPS: boolEnv("NEXT_PUBLIC_FEATURE_MEMBERSHIPS"),
-  FEATURE_BUNDLES: boolEnv("NEXT_PUBLIC_FEATURE_BUNDLES"),
-  FEATURE_CERTIFICATES: boolEnv("NEXT_PUBLIC_FEATURE_CERTIFICATES"),
-  FEATURE_BADGES: boolEnv("NEXT_PUBLIC_FEATURE_BADGES", false),
-  FEATURE_REVIEWS: boolEnv("NEXT_PUBLIC_FEATURE_REVIEWS"),
-  FEATURE_BLOG: boolEnv("NEXT_PUBLIC_FEATURE_BLOG"),
+  FEATURE_MEMBERSHIPS: boolFlag(process.env.NEXT_PUBLIC_FEATURE_MEMBERSHIPS),
+  FEATURE_BUNDLES: boolFlag(process.env.NEXT_PUBLIC_FEATURE_BUNDLES),
+  FEATURE_CERTIFICATES: boolFlag(process.env.NEXT_PUBLIC_FEATURE_CERTIFICATES),
+  FEATURE_BADGES: boolFlag(process.env.NEXT_PUBLIC_FEATURE_BADGES, false),
+  FEATURE_REVIEWS: boolFlag(process.env.NEXT_PUBLIC_FEATURE_REVIEWS),
+  FEATURE_BLOG: boolFlag(process.env.NEXT_PUBLIC_FEATURE_BLOG),
 } as const;
 
 export const WP_REST_BASE = env.WP_API_URL

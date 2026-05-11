@@ -1,7 +1,4 @@
 import { Suspense } from "react";
-import { dehydrate, HydrationBoundary, QueryClient } from "@tanstack/react-query";
-import { coursesService } from "@/lib/services/courses";
-import { queryKeys } from "@/lib/utils/query-keys";
 import { HeroSection } from "@/components/home/hero-section";
 import { PricingSection } from "@/components/home/pricing-section";
 import { TrustedOrgs } from "@/components/home/trusted-orgs";
@@ -11,31 +8,12 @@ import { WhySection } from "@/components/home/why-section";
 import { ReviewsSection } from "@/components/home/reviews-section";
 import { BlogSection } from "@/components/home/blog-section";
 import { CourseCardSkeleton } from "@/components/courses/course-card";
-import type { CourseListFilters } from "@/types/course";
 
 export const revalidate = 300;
 
-const FEATURED_FILTERS: CourseListFilters = {
-  perPage: 8,
-  orderBy: "popularity",
-  order: "desc",
-};
-
-export default async function HomePage() {
-  const qc = new QueryClient();
-  await Promise.allSettled([
-    qc.prefetchQuery({
-      queryKey: queryKeys.courses.list(FEATURED_FILTERS),
-      queryFn: () => coursesService.list(FEATURED_FILTERS),
-    }),
-    qc.prefetchQuery({
-      queryKey: queryKeys.courses.categories,
-      queryFn: () => coursesService.categories(),
-    }),
-  ]);
-
+export default function HomePage() {
   return (
-    <HydrationBoundary state={dehydrate(qc)}>
+    <>
       {/* 1. Hero */}
       <HeroSection />
 
@@ -81,6 +59,6 @@ export default async function HomePage() {
 
       {/* 8. Blog */}
       <BlogSection />
-    </HydrationBoundary>
+    </>
   );
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import Image from "next/image";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { HeroCarousel } from "./hero-carousel";
 import { CourseCard } from "@/components/courses/course-card";
 import { coursesService } from "@/lib/services/courses";
@@ -26,15 +27,16 @@ export async function HeroSection() {
   const courses = await getPopularCourses();
 
   return (
-    <section className="relative overflow-hidden bg-primary-50">
-      <div className="container flex flex-col items-start gap-12 py-16 lg:flex-row lg:items-center lg:py-20">
+    <section className="relative overflow-x-clip bg-[#e6f8fe]">
+      <div className="mx-auto flex max-w-[1400px] flex-col items-start gap-12 px-6 py-[60px] lg:flex-row lg:items-center lg:px-10 lg:py-[160px]">
         {/* Left panel */}
-        <div className="flex min-w-0 flex-1 flex-col gap-6">
+        <div className="flex w-full min-w-0 flex-col gap-6 lg:max-w-[636px]">
+          {/* Headline + subtitle */}
           <div className="flex flex-col gap-4">
-            <h1 className="font-suse text-4xl font-bold leading-tight text-neutral-900 md:text-5xl lg:text-[56px] lg:leading-[1.2]">
+            <h1 className="font-suse text-[40px] font-bold leading-[1.2] text-[#00204a] md:text-[48px] lg:text-[56px]">
               UK&apos;s Leading eLearning Hub for Growth
             </h1>
-            <p className="font-open-sans text-base leading-relaxed text-neutral-500 lg:max-w-[560px]">
+            <p className="font-open-sans text-base font-normal leading-[1.5] text-[#3b5374]">
               Join thousands of professionals and businesses across the UK. Be industry-ready with
               expert-led, accredited online training and earn recognised certifications. Stay
               compliant, upskill, and advance with quality courses, anywhere, anytime.
@@ -43,49 +45,52 @@ export async function HeroSection() {
 
           {/* Accreditation logos */}
           <div className="flex items-center gap-4">
-            <div className="flex h-[72px] w-[90px] items-center justify-center rounded-lg border border-neutral-30 bg-white px-2 py-2">
-              <span className="text-center text-xs font-semibold leading-tight text-neutral-900">
-                CPD<br />Certified
-              </span>
+            <div className="flex h-[80px] w-[100px] items-center justify-center overflow-hidden rounded-[8px] border border-[#eaecee] bg-white">
+              <Image
+                src="/images/cpd-logo.png"
+                alt="CPD Certified"
+                width={56}
+                height={56}
+                className="object-contain"
+              />
             </div>
-            <div className="flex h-[72px] w-[90px] items-center justify-center rounded-lg border border-neutral-30 bg-white px-2 py-2">
-              <span className="text-center text-xs font-semibold leading-tight text-neutral-900">
-                UKRLP<br />Registered
-              </span>
+            <div className="flex h-[80px] w-[100px] items-center justify-center overflow-hidden rounded-[10px] border border-[#eaecee] bg-white px-3">
+              <Image
+                src="/images/ukrlp-logo.png"
+                alt="UKRLP Registered"
+                width={75}
+                height={20}
+                className="object-contain"
+              />
             </div>
           </div>
 
           {/* Search box */}
-          <div className="overflow-hidden rounded-sm bg-neutral-900/40 backdrop-blur-sm">
-            <div className="flex items-center gap-4 p-4">
-              <form
-                action="/courses"
-                method="get"
-                className="flex flex-1 items-center gap-3"
+          <div className="overflow-hidden rounded-[4px] bg-[rgba(0,32,74,0.4)] backdrop-blur-[8px]">
+            <form action="/courses" method="get" className="flex items-center gap-6 p-6">
+              <input
+                name="search"
+                type="text"
+                placeholder="Subject or qualification, e.g. IT Course"
+                className="h-[56px] flex-1 rounded-[2px] px-8 font-open-sans text-sm text-[#767476] outline-none placeholder:text-[#767476]"
+              />
+              <button
+                type="submit"
+                className="shrink-0 rounded-[2px] bg-[#9e6f21] px-[25px] py-4 font-open-sans text-base font-normal leading-[1.5] text-white transition-opacity hover:opacity-90"
               >
-                <input
-                  name="search"
-                  type="text"
-                  placeholder="Subject or qualification, e.g. IT Course"
-                  className="flex-1 rounded-sm px-4 py-3 font-open-sans text-sm text-neutral-500 outline-none placeholder:text-neutral-200"
-                />
-                <button
-                  type="submit"
-                  className="shrink-0 rounded-sm bg-secondary-500 px-6 py-3 font-open-sans text-sm font-medium text-white transition-colors hover:bg-secondary-600"
-                >
-                  Search Courses
-                </button>
-              </form>
-            </div>
-            {/* Popular category scrollers */}
-            <div className="flex items-center gap-2 px-4 pb-3 text-sm text-white">
-              <ArrowRight className="h-4 w-4 shrink-0" />
-              <div className="flex items-center gap-0 overflow-x-auto scrollbar-hide">
+                Search Courses
+              </button>
+            </form>
+
+            {/* Quick category links */}
+            <div className="flex items-center gap-2 overflow-hidden px-6 pb-6">
+              <ChevronLeft className="h-4 w-4 shrink-0 text-white" />
+              <div className="flex min-w-0 flex-1 items-center overflow-x-auto">
                 {POPULAR_CATEGORIES.map((cat, i) => (
-                  <span key={cat} className="flex items-center gap-0 whitespace-nowrap">
+                  <span key={cat} className="flex shrink-0 items-center">
                     <Link
                       href={`/courses?search=${encodeURIComponent(cat)}`}
-                      className="px-2 text-white/90 transition-colors hover:text-white"
+                      className="whitespace-nowrap px-2 font-open-sans text-base font-normal leading-[1.5] text-white/90 transition-colors hover:text-white"
                     >
                       {cat}
                     </Link>
@@ -95,21 +100,20 @@ export async function HeroSection() {
                   </span>
                 ))}
               </div>
-              <ArrowRight className="h-4 w-4 shrink-0" />
+              <ChevronRight className="h-4 w-4 shrink-0 text-white" />
             </div>
           </div>
         </div>
 
-        {/* Right panel — carousel (desktop) / single card (mobile) */}
-        {courses.length > 0 ? (
+        {/* Right panel — stacked course carousel */}
+        {courses.length > 0 && (
           <>
             <HeroCarousel courses={courses} />
-            {/* Mobile: single card */}
             <div className="w-full lg:hidden">
               <CourseCard course={courses[0]} />
             </div>
           </>
-        ) : null}
+        )}
       </div>
     </section>
   );

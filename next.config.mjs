@@ -1,6 +1,12 @@
 import createNextIntlPlugin from "next-intl/plugin";
 import { withSentryConfig } from "@sentry/nextjs";
 
+// Allow self-signed / untrusted certs in local dev for Next.js image optimizer.
+// Scoped to non-production only; does not affect browser requests.
+if (process.env.NODE_ENV !== "production") {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+}
+
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const wpUrl = process.env.NEXT_PUBLIC_WP_API_URL;

@@ -28,7 +28,7 @@ export default function LearnStartPage() {
     if (first) {
       router.replace(`/learn/${courseId}/${first}`);
     } else if (!isLoading) {
-      router.replace(`/courses/${courseId}`);
+      router.replace(`/course/${courseId}`);
     }
   }, [courseId, curriculum, progress, isLoading, router]);
 

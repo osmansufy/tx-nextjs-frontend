@@ -4,7 +4,7 @@ import Image from "next/image";
 import { serverApi } from "@/lib/api/server";
 import { fetchSettings } from "@/lib/services/settings.server";
 import { CertificateForm } from "./certificate-form";
-import type { FooterNavLink, FooterData } from "@/types/settings";
+import type { FooterNavLink, FooterData, WpNavItem } from "@/types/settings";
 
 function SocialIcon({
   className,
@@ -53,12 +53,20 @@ const LinkedinIcon = ({ className }: { className?: string }) => (
   </SocialIcon>
 );
 
+const YoutubeIcon = ({ className }: { className?: string }) => (
+  <SocialIcon className={className}>
+    <path d="M22.54 6.42a2.78 2.78 0 00-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 001.46 6.42 29 29 0 001 12a29 29 0 00.46 5.58 2.78 2.78 0 001.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 001.95-1.96A29 29 0 0023 12a29 29 0 00-.46-5.58z" />
+    <polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="white" />
+  </SocialIcon>
+);
+
 const SOCIAL_ICON_MAP: Record<string, ComponentType<{ className?: string }>> = {
   facebook: FacebookIcon,
   twitter: XIcon,
   tiktok: TikTokIcon,
   instagram: InstagramIcon,
   linkedin: LinkedinIcon,
+  youtube: YoutubeIcon,
 };
 
 const SOCIAL_LABEL_MAP: Record<string, string> = {
@@ -70,21 +78,26 @@ const SOCIAL_LABEL_MAP: Record<string, string> = {
   youtube: "YouTube",
 };
 
-const FALLBACK_ABOUT_LINKS: FooterNavLink[] = [
+const FALLBACK_NAV_LINKS: FooterNavLink[] = [
   { href: "/about", label: "About us" },
   { href: "/careers", label: "Work for us" },
   { href: "/resources", label: "Resources", badge: "New" },
   { href: "/force-for-good", label: "Force for Good" },
   { href: "/reviews", label: "Reviews" },
-];
-
-const FALLBACK_SUPPORT_LINKS: FooterNavLink[] = [
   { href: "/help", label: "Help and FAQs" },
   { href: "/contact", label: "Contact us" },
   { href: "/verify-certificate", label: "Verify certificate" },
   { href: "/cancellations", label: "Cancellations and refunds" },
   { href: "/policies", label: "Policies and terms of use" },
 ];
+
+function normalizeNav(nav: FooterData["nav"] | undefined): FooterNavLink[] {
+  if (!nav) return FALLBACK_NAV_LINKS;
+  if (Array.isArray(nav)) {
+    return (nav as WpNavItem[]).map((item) => ({ label: item.title, href: item.url }));
+  }
+  return [...(nav.about ?? []), ...(nav.support ?? [])];
+}
 
 const FALLBACK_SOCIAL: FooterData["social"] = {
   facebook: "https://facebook.com/trainingexcellence",
@@ -99,10 +112,12 @@ export async function SiteFooter() {
     serverApi.footer.get().catch(() => null),
     fetchSettings().catch(() => null),
   ]);
-
-  const aboutLinks = footerData?.nav.about ?? FALLBACK_ABOUT_LINKS;
-  const supportLinks = footerData?.nav.support ?? FALLBACK_SUPPORT_LINKS;
+  const navLinks = normalizeNav(footerData?.nav);
+  const mid = Math.ceil(navLinks.length / 2);
+  const col1 = navLinks.slice(0, mid);
+  const col2 = navLinks.slice(mid);
   const social = footerData?.social ?? FALLBACK_SOCIAL;
+  const contact = footerData?.contact ?? {};
 
   const socialLinks = (Object.entries(social) as [string, string | null | undefined][])
     .filter((entry): entry is [string, string] => !!entry[1])
@@ -197,24 +212,42 @@ export async function SiteFooter() {
                 </div>
               </div>
             )}
+            {(contact.email || contact.phone) && (
+              <div className="flex flex-col gap-2">
+                {contact.phone && (
+                  <a
+                    href={`tel:${contact.phone}`}
+                    className="font-open-sans text-[14px] leading-[1.5] text-neutral-30 transition-colors hover:text-primary-400"
+                  >
+                    {contact.phone}
+                  </a>
+                )}
+                {contact.email && (
+                  <a
+                    href={`mailto:${contact.email}`}
+                    className="font-open-sans text-[14px] leading-[1.5] text-neutral-30 transition-colors hover:text-primary-400"
+                  >
+                    {contact.email}
+                  </a>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Links + Certificate validator */}
           <div className="flex flex-1 flex-col gap-10 lg:flex-row lg:items-start lg:justify-between lg:pl-8">
             {/* Nav columns */}
             <div className="flex gap-8 lg:w-[320px] lg:shrink-0">
-              {/* About */}
-              <div className="flex flex-1 flex-col gap-4">
-                <p className="font-open-sans text-[12px] leading-normal text-neutral-50">About</p>
+              <div className="flex flex-1 flex-col gap-3">
                 <ul className="flex flex-col gap-3">
-                  {aboutLinks.map(({ href, label, badge }) => (
+                  {col1.map(({ href, label, badge }) => (
                     <li key={href} className="flex items-center gap-2">
-                      <Link
+                      <a
                         href={href}
                         className="font-suse text-[16px] font-medium leading-[1.2] text-neutral-30 transition-colors hover:text-primary-400"
                       >
                         {label}
-                      </Link>
+                      </a>
                       {badge && (
                         <span className="rounded-full border border-white/30 bg-white/10 px-2 py-0.5 font-open-sans text-[12px] font-medium leading-[18px] text-white">
                           {badge}
@@ -224,21 +257,21 @@ export async function SiteFooter() {
                   ))}
                 </ul>
               </div>
-
-              {/* Support */}
-              <div className="flex flex-1 flex-col gap-4">
-                <p className="font-open-sans text-[12px] leading-normal text-neutral-50">
-                  Support
-                </p>
+              <div className="flex flex-1 flex-col gap-3">
                 <ul className="flex flex-col gap-3">
-                  {supportLinks.map(({ href, label }) => (
-                    <li key={href}>
-                      <Link
+                  {col2.map(({ href, label, badge }) => (
+                    <li key={href} className="flex items-center gap-2">
+                      <a
                         href={href}
                         className="font-suse text-[16px] font-medium leading-[1.2] text-neutral-30 transition-colors hover:text-primary-400"
                       >
                         {label}
-                      </Link>
+                      </a>
+                      {badge && (
+                        <span className="rounded-full border border-white/30 bg-white/10 px-2 py-0.5 font-open-sans text-[12px] font-medium leading-[18px] text-white">
+                          {badge}
+                        </span>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -264,8 +297,8 @@ export async function SiteFooter() {
       <div className="border-t border-neutral-600 px-4">
         <div className="mx-auto max-w-[1296px] py-8 text-right">
           <p className="font-open-sans text-[16px] leading-[1.5] text-neutral-200">
-            © 2024 Training Excellence. Riverside Business Park, Dansk Way, Ilkley, West Yorkshire,
-            LS29 8JZ.
+            © {new Date().getFullYear()} Training Excellence.{" "}
+            {contact.address ?? "Riverside Business Park, Dansk Way, Ilkley, West Yorkshire, LS29 8JZ."}
             <br />
             VAT Reg. No: 923 6593 07 &nbsp;|&nbsp; Registered in England and Wales: 6428976
           </p>

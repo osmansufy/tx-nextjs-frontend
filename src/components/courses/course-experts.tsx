@@ -1,0 +1,81 @@
+"use client";
+
+import { useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { Linkedin } from "lucide-react";
+import type { CourseExpert } from "@/types/course";
+
+interface CourseExpertsProps {
+  experts: CourseExpert[];
+}
+
+function ExpertCard({ expert }: { expert: CourseExpert }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="rounded-xl border border-[#ebedf1] bg-white p-6 shadow-sm">
+      <div className="flex items-start gap-4">
+        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full bg-neutral-100">
+          {expert.image?.full ? (
+            <Image
+              src={expert.image.full}
+              alt={expert.title}
+              fill
+              sizes="80px"
+              className="object-cover"
+            />
+          ) : null}
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="font-bold text-neutral-900">{expert.title}</h3>
+          {expert.designation ? (
+            <p className="mt-0.5 text-sm text-neutral-500">{expert.designation}</p>
+          ) : null}
+          {expert.social_url ? (
+            <Link
+              href={expert.social_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-flex items-center gap-1.5 text-xs text-blue-600 hover:underline"
+            >
+              <Linkedin className="h-3.5 w-3.5" />
+              LinkedIn Profile
+            </Link>
+          ) : null}
+        </div>
+      </div>
+      {expert.bio ? (
+        <div className="mt-4">
+          <div
+            className={`prose prose-sm prose-neutral max-w-none text-neutral-600 overflow-hidden transition-all duration-300 ${expanded ? "" : "line-clamp-3"}`}
+            dangerouslySetInnerHTML={{ __html: expert.bio }}
+          />
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            className="mt-2 text-sm font-medium text-secondary-500 hover:underline"
+          >
+            {expanded ? "Show less" : "Show bio"}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function CourseExperts({ experts }: CourseExpertsProps) {
+  if (!experts.length) return null;
+
+  return (
+    <section className="space-y-6">
+      <h2 className="text-xl font-bold text-neutral-900">
+        {experts.length === 1 ? "Your Expert" : "Your Experts"}
+      </h2>
+      <div className="grid gap-4 md:grid-cols-2">
+        {experts.map((expert) => (
+          <ExpertCard key={expert.id} expert={expert} />
+        ))}
+      </div>
+    </section>
+  );
+}

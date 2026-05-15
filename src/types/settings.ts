@@ -22,11 +22,22 @@ export interface FooterNavLink {
   badge?: string;
 }
 
+export interface WpNavItem {
+  id: number;
+  title: string;
+  url: string;
+  slug: string | null;
+  object_type: string;
+  object_id: number;
+  target: string | null;
+  classes: string[];
+  description: string | null;
+  menu_order: number;
+  items: WpNavItem[];
+}
+
 export interface FooterData {
-  nav: {
-    about: FooterNavLink[];
-    support: FooterNavLink[];
-  };
+  nav: WpNavItem[] | { about: FooterNavLink[]; support: FooterNavLink[] };
   social: {
     facebook?: string | null;
     twitter?: string | null;

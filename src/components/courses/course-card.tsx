@@ -20,7 +20,7 @@ export function CourseCard({ course, className }: CourseCardProps) {
         className,
       )}
     >
-      <Link href={`/courses/${course.slug}`} className="block shrink-0">
+      <Link href={`/course/${course.slug}`} className="block shrink-0">
         <div className="relative aspect-[19/10] w-full overflow-hidden bg-neutral-20">
           {course.featuredImage ? (
             <Image
@@ -57,7 +57,7 @@ export function CourseCard({ course, className }: CourseCardProps) {
         </div>
 
         {/* Title */}
-        <Link href={`/courses/${course.slug}`}>
+        <Link href={`/course/${course.slug}`}>
           <h3 className="line-clamp-2 font-suse font-bold leading-snug text-neutral-900 transition-colors hover:text-secondary-500">
             {course.title}
           </h3>
@@ -125,7 +125,7 @@ export function CourseCard({ course, className }: CourseCardProps) {
             ) : null}
           </div>
           <Link
-            href={`/courses/${course.slug}`}
+            href={`/course/${course.slug}`}
             className="inline-flex items-center gap-1 rounded-full border border-secondary-500 px-4 py-1.5 text-sm text-secondary-500 transition-colors hover:bg-secondary-50"
           >
             View Course →

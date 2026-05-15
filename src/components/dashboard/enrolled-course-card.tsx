@@ -76,7 +76,7 @@ export function EnrolledCourseCard({ enrollment }: EnrolledCourseCardProps) {
       <CardContent className="space-y-3 p-5">
         <div>
           <h3 className="line-clamp-2 font-semibold">
-            <Link href={`/courses/${c.slug}`} className="hover:text-primary">
+            <Link href={`/course/${c.slug}`} className="hover:text-primary">
               {c.title}
             </Link>
           </h3>

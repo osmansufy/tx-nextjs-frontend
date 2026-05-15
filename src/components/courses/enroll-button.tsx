@@ -31,7 +31,7 @@ export function EnrollButton({ courseId, isFree, price }: EnrollButtonProps) {
   if (!isAuthenticated) {
     return (
       <Button size="lg" asChild>
-        <Link href={`/login?next=/courses/${courseId}`}>
+        <Link href={`/login?next=/course/${courseId}`}>
           <GraduationCap />
           {isFree ? "Sign in to enroll" : `Sign in to enroll${price ? ` \u2014 $${price}` : ""}`}
         </Link>

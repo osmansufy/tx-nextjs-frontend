@@ -4,10 +4,16 @@ import { paginate, decodeEntities } from "@/lib/api/parsers";
 import type {
   Course,
   CourseCategory,
+  CourseAccreditation,
+  CourseExpert,
+  CourseBreadcrumb,
   CourseCurriculum,
   CourseDetail,
   CourseListFilters,
   CourseSection,
+  CourseSections,
+  CourseReviews,
+  CourseRichData,
 } from "@/types/course";
 import type { UnitSummary } from "@/types/unit";
 import type { PaginatedResponse, WpRendered } from "@/types/api";
@@ -135,37 +141,81 @@ function normalizeInstructor(raw: RawInstructor) {
 }
 
 export function normalizeCourse(raw: RawCourse): Course {
-  const price = toPrice(raw.price);
-  const originalPrice = toPrice(raw.original_price) ?? toPrice(raw.regular_price) ?? toPrice(raw.compare_at_price);
+  const price = toPrice(raw?.price);
+  const originalPrice =
+    toPrice(raw?.original_price) ?? toPrice(raw?.regular_price) ?? toPrice(raw?.compare_at_price);
 
   // Instructor: real API uses instructors[] + primary_instructor; legacy uses instructor
-  const instructorRaw = raw.primary_instructor ?? raw.instructors?.[0] ?? raw.instructor ?? raw.author;
+  const instructorRaw =
+    raw?.primary_instructor ?? raw?.instructors?.[0] ?? raw?.instructor ?? raw?.author;
 
   return {
-    id: raw.id,
-    slug: raw.slug ?? String(raw.id),
-    title: renderedOrString(raw.title) || raw.name || "Untitled",
-    excerpt: renderedOrString(raw.excerpt) || raw.description,
-    content: renderedOrString(raw.content),
+    id: raw?.id,
+    slug: raw?.slug ?? String(raw?.id),
+    title: renderedOrString(raw?.title) || raw?.name || "Untitled",
+    excerpt: renderedOrString(raw?.excerpt) || raw?.description,
+    content: renderedOrString(raw?.content),
     featuredImage: featuredImageUrl(raw),
     price,
-    originalPrice: originalPrice !== undefined && originalPrice !== price ? originalPrice : undefined,
-    isFree: raw.is_free ?? raw.free ?? (price !== undefined ? price === 0 : undefined),
-    level: (raw.level as Course["level"]) ?? undefined,
+    originalPrice:
+      originalPrice !== undefined && originalPrice !== price ? originalPrice : undefined,
+    isFree: raw?.is_free ?? raw?.free ?? (price !== undefined ? price === 0 : undefined),
+    level: (raw?.level as Course["level"]) ?? undefined,
     // Real API: duration in seconds (may be null)
-    durationSeconds: raw.duration_seconds ?? (raw.duration ?? raw.total_duration) ?? undefined,
-    unitsCount: raw.units_count ?? raw.lessons_count ?? raw.total_units ?? raw.total_lessons,
-    lessonsCount: raw.lessons_count ?? raw.total_lessons ?? raw.units_count ?? raw.total_units,
+    durationSeconds: raw?.duration_seconds ?? raw?.duration ?? raw?.total_duration ?? undefined,
+    unitsCount: raw?.units_count ?? raw?.lessons_count ?? raw?.total_units ?? raw?.total_lessons,
+    lessonsCount: raw?.lessons_count ?? raw?.total_lessons ?? raw?.units_count ?? raw?.total_units,
     // Real API field is total_students
-    studentsCount: raw.total_students ?? raw.students_count,
+    studentsCount: raw?.total_students ?? raw?.students_count,
     // Real API field is average_rating
-    rating: raw.average_rating ?? raw.rating,
-    ratingCount: raw.rating_count,
-    categories: raw.categories as CourseCategory[] | undefined,
+    rating: raw?.average_rating ?? raw?.rating,
+    ratingCount: raw?.rating_count,
+    categories: raw?.categories as CourseCategory[] | undefined,
     instructor: instructorRaw ? normalizeInstructor(instructorRaw) : undefined,
     // Real API: Unix timestamps; legacy: ISO strings
-    createdAt: toUnixIso(raw.date_created) ?? toUnixIso(raw.date_gmt) ?? toUnixIso(raw.date),
-    updatedAt: toUnixIso(raw.date_modified) ?? toUnixIso(raw.modified_gmt) ?? toUnixIso(raw.modified),
+    createdAt: toUnixIso(raw?.date_created) ?? toUnixIso(raw?.date_gmt) ?? toUnixIso(raw?.date),
+    updatedAt:
+      toUnixIso(raw?.date_modified) ?? toUnixIso(raw?.modified_gmt) ?? toUnixIso(raw?.modified),
+  };
+}
+
+export function normalizeRichCourse(raw: Record<string, unknown>): CourseRichData {
+  const base = normalizeCourse(raw as unknown as RawCourse);
+
+  const rawDuration = raw.duration;
+  const duration =
+    rawDuration && typeof rawDuration === "object" && "value" in (rawDuration as object)
+      ? (rawDuration as { value: number; unit: string })
+      : null;
+
+  const rawPricing = raw.pricing as Record<string, unknown> | null | undefined;
+  const pricing = rawPricing
+    ? {
+        regular_price: Number(rawPricing.regular_price ?? 0),
+        sale_price: Number(rawPricing.sale_price ?? 0),
+        price: Number(rawPricing.price ?? 0),
+        is_on_sale: Boolean(rawPricing.is_on_sale),
+        currency: String(rawPricing?.currency ?? "GBP"),
+        price_html: String(rawPricing?.price_html ?? ""),
+        sale_price_html: String(rawPricing?.sale_price_html ?? ""),
+      }
+    : null;
+
+  return {
+    ...base,
+    duration,
+    pricing,
+    accreditations: Array.isArray(raw.accreditations)
+      ? (raw.accreditations as CourseAccreditation[])
+      : [],
+    experts: Array.isArray(raw.experts) ? (raw.experts as CourseExpert[]) : [],
+    badges: Array.isArray(raw.badges) ? (raw.badges as string[]) : [],
+    cpd_points: typeof raw.cpd_points === "number" ? raw.cpd_points : undefined,
+    breadcrumb: Array.isArray(raw.breadcrumb) ? (raw.breadcrumb as CourseBreadcrumb[]) : [],
+    announcement:
+      typeof raw.announcement === "string" && raw.announcement ? raw.announcement : null,
+    video_url: typeof raw.video_url === "string" && raw.video_url ? raw.video_url : null,
+    course_type: typeof raw.course_type === "string" ? raw.course_type : undefined,
   };
 }
 
@@ -180,10 +230,10 @@ export const coursesService = {
     if (filters.orderBy) params.orderby = filters.orderBy;
     if (filters.order) params.order = filters.order;
 
-    const res = await api.get<RawCourse[] | { items?: RawCourse[]; data?: RawCourse[]; total?: number; total_pages?: number }>(
-      endpoints.courses.list,
-      { params },
-    );
+    const res = await api.get<
+      | RawCourse[]
+      | { items?: RawCourse[]; data?: RawCourse[]; total?: number; total_pages?: number }
+    >(endpoints.courses.list, { params });
     const parsed = paginate<RawCourse>(res, page, perPage);
     return {
       ...parsed,
@@ -245,6 +295,32 @@ export const coursesService = {
     );
     const parsed = paginate<RawCourse>(res, 1, perPage);
     return { ...parsed, items: parsed.items.map(normalizeCourse) };
+  },
+
+  async sections(idOrSlug: string | number): Promise<CourseSections> {
+    const { data } = await api.get<CourseSections>(endpoints.courses.sections(idOrSlug));
+    return data ?? {};
+  },
+
+  async reviews(idOrSlug: string | number): Promise<CourseReviews> {
+    const { data } = await api.get<CourseReviews>(
+      endpoints.reviews.courseReviews(Number(idOrSlug)),
+    );
+    return data;
+  },
+
+  async related(idOrSlug: string | number, perPage = 6): Promise<PaginatedResponse<Course>> {
+    const res = await api.get<RawCourse[] | { items?: RawCourse[]; total?: number }>(
+      endpoints.courses.related(idOrSlug),
+      { params: { per_page: perPage } },
+    );
+    const parsed = paginate<RawCourse>(res, 1, perPage);
+    return { ...parsed, items: parsed.items.map(normalizeCourse) };
+  },
+
+  async richDetail(idOrSlug: string | number): Promise<CourseRichData> {
+    const { data } = await api.get<unknown>(endpoints.courses.detail(idOrSlug));
+    return normalizeCourse(data as RawCourse) as CourseRichData;
   },
 
   async categories(): Promise<CourseCategory[]> {

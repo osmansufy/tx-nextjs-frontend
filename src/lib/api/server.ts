@@ -10,6 +10,7 @@
 
 import { getServerWpJsonBase, env } from "@/lib/env";
 import type { FooterData } from "@/types/settings";
+import type { CourseSections } from "@/types/course";
 
 const lms = `/${env.LMS_NAMESPACE}`;
 
@@ -384,6 +385,24 @@ export const serverApi = {
         revalidate: 600,
         tags: [`course:${slug}:curriculum`],
       }),
+
+    richDetail: (slug: string) =>
+      serverFetch<Record<string, unknown>>(`${lms}/courses/${encodeURIComponent(slug)}`, {
+        revalidate: 600,
+        tags: [`course:${slug}`, "courses:list"],
+      }),
+
+    sections: (slug: string) =>
+      serverFetch<CourseSections>(`${lms}/courses/${encodeURIComponent(slug)}/sections`, {
+        revalidate: 600,
+        tags: [`course:${slug}:sections`],
+      }),
+
+    related: (slug: string, perPage = 6) =>
+      serverFetch<ApiPaginated<ApiCourse>>(
+        `${lms}/courses/${encodeURIComponent(slug)}/related${qs({ per_page: perPage })}`,
+        { revalidate: 300, tags: [`course:${slug}:related`] },
+      ),
 
     featured: (perPage?: number) =>
       serverFetch<ApiPaginated<ApiCourse>>(

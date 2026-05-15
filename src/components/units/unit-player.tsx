@@ -43,7 +43,7 @@ export function UnitPlayer({ courseId, unitId }: UnitPlayerProps) {
       <aside className="hidden border-r bg-muted/30 lg:flex lg:flex-col">
         <div className="border-b p-4">
           <Link
-            href={`/courses/${courseId}`}
+            href={`/course/${courseId}`}
             className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-3 w-3" /> Back to course
@@ -112,7 +112,7 @@ export function UnitPlayer({ courseId, unitId }: UnitPlayerProps) {
       <section className="flex min-h-svh flex-col">
         <div className="border-b p-4 lg:hidden">
           <Link
-            href={`/courses/${courseId}`}
+            href={`/course/${courseId}`}
             className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-3 w-3" /> Back to course

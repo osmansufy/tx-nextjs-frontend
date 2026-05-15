@@ -32,6 +32,8 @@ export const endpoints = {
     popular: `${lms}/courses/popular`,
     free: `${lms}/courses/free`,
     curriculum: (idOrSlug: string | number) => `${lms}/courses/${idOrSlug}/curriculum`,
+    sections: (idOrSlug: string | number) => `${lms}/courses/${idOrSlug}/sections`,
+    related: (idOrSlug: string | number) => `${lms}/courses/${idOrSlug}/related`,
     instructors: (id: number) => `${lms}/courses/${id}/instructors`,
     enroll: (courseId: number) => `${lms}/courses/${courseId}/enroll`,
   },

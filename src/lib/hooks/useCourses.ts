@@ -37,3 +37,21 @@ export function useCourseCategories() {
     staleTime: 5 * 60_000,
   });
 }
+
+export function useCourseReviews(idOrSlug: string | number, opts?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: queryKeys.courses.reviews(idOrSlug),
+    queryFn: () => coursesService.reviews(idOrSlug),
+    enabled: (opts?.enabled ?? true) && Boolean(idOrSlug),
+    staleTime: 60_000,
+  });
+}
+
+export function useCourseRelated(idOrSlug: string | number, opts?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: queryKeys.courses.related(idOrSlug),
+    queryFn: () => coursesService.related(idOrSlug),
+    enabled: (opts?.enabled ?? true) && Boolean(idOrSlug),
+    staleTime: 5 * 60_000,
+  });
+}

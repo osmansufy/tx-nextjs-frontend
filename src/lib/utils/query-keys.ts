@@ -9,6 +9,9 @@ export const queryKeys = {
     list: (filters: CourseListFilters = {}) => ["courses", "list", filters] as const,
     detail: (slugOrId: string | number) => ["courses", "detail", slugOrId] as const,
     curriculum: (id: number | string) => ["courses", "curriculum", id] as const,
+    sections: (id: number | string) => ["courses", "sections", id] as const,
+    reviews: (id: number | string) => ["courses", "reviews", id] as const,
+    related: (id: number | string) => ["courses", "related", id] as const,
     categories: ["courses", "categories"] as const,
   },
   units: {

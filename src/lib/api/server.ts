@@ -9,6 +9,7 @@
  */
 
 import { getServerWpJsonBase, env } from "@/lib/env";
+import type { FooterData } from "@/types/settings";
 
 const lms = `/${env.LMS_NAMESPACE}`;
 
@@ -456,6 +457,14 @@ export const serverApi = {
       serverFetch<ApiSettings>(`${lms}/settings`, {
         revalidate: 3600,
         tags: ["settings"],
+      }),
+  },
+
+  footer: {
+    get: () =>
+      serverFetch<FooterData>(`${lms}/footer`, {
+        revalidate: 3600,
+        tags: ["footer"],
       }),
   },
 

@@ -128,6 +128,9 @@ export const endpoints = {
   settings: {
     get: `${lms}/settings`,
   },
+  footer: {
+    get: `${lms}/footer`,
+  },
   memberships: {
     plans: `${lms}/memberships/plans`,
     subscribe: `${lms}/memberships/subscribe`,

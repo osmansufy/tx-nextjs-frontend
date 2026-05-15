@@ -10,9 +10,36 @@ export interface SiteFeatures {
 export interface SiteSocial {
   facebook?: string;
   twitter?: string;
+  tiktok?: string;
   linkedin?: string;
   instagram?: string;
   youtube?: string;
+}
+
+export interface FooterNavLink {
+  label: string;
+  href: string;
+  badge?: string;
+}
+
+export interface FooterData {
+  nav: {
+    about: FooterNavLink[];
+    support: FooterNavLink[];
+  };
+  social: {
+    facebook?: string | null;
+    twitter?: string | null;
+    tiktok?: string | null;
+    instagram?: string | null;
+    linkedin?: string | null;
+    youtube?: string | null;
+  };
+  contact: {
+    email?: string | null;
+    phone?: string | null;
+    address?: string | null;
+  };
 }
 
 export interface SiteSettings {

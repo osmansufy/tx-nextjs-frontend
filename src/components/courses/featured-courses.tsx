@@ -7,7 +7,12 @@ interface FeaturedCoursesProps {
 }
 
 export async function FeaturedCourses({ limit = 8 }: FeaturedCoursesProps) {
-  const data = await serverApi.courses.featured(limit);
+  let data: Awaited<ReturnType<typeof serverApi.courses.featured>> | null = null;
+  try {
+    data = await serverApi.courses.featured(limit);
+  } catch {
+    return null;
+  }
 
   if (!data?.items?.length) return null;
 
